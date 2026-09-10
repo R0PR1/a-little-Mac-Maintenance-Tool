@@ -55,7 +55,7 @@ Plists are rendered from `launchd/mm.*.plist.template` and loaded with `launchct
 
 ## `mm self-update`
 
-Detects Homebrew, git checkout, or standalone install. See the README table. Dirty git trees are refused.
+Detects Homebrew, git checkout, or standalone install. Dirty git trees are refused. Prefix installs from `make install` are standalone copies; use `make link` if you want git self-update from a checkout.
 
 ## `mm version`
 

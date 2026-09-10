@@ -45,10 +45,17 @@ Most “Mac maintenance” tools either do too much, or they hide mutations behi
 ```bash
 git clone https://github.com/R0PR1/a-little-Mac-Maintenance-Tool.git
 cd a-little-Mac-Maintenance-Tool
-./scripts/install.sh
+make install
 ```
 
-The installer copies the project to `~/.local/share/mm` and symlinks `mm` into `~/.local/bin`. Put that directory on your `PATH`.
+That copies the payload to `~/.local/share/mm` and writes a small launcher at `~/.local/bin/mm` (not a symlink to `bin/mm`, which would look for libraries in `~/.local/lib/mm`). Put `~/.local/bin` on your `PATH`.
+
+```bash
+make install PREFIX=$HOME/.local   # default
+make reinstall                       # uninstall then install
+make link                           # launcher pointing at this git checkout
+make uninstall
+```
 
 Zsh completion lives in [`completions/_mm`](completions/_mm). With Homebrew or a fpath that includes the repo:
 
@@ -65,7 +72,7 @@ A formula stub is in [`packaging/homebrew/mm.rb`](packaging/homebrew/mm.rb). Poi
 brew install --build-from-source packaging/homebrew/mm.rb
 ```
 
-Uninstall a source install with `./scripts/uninstall.sh`. Configuration (`~/.config/mm/`) and logs (`~/Library/Logs/mm/`) are preserved.
+Uninstall a source install with `make uninstall`. Configuration (`~/.config/mm/`) and logs (`~/Library/Logs/mm/`) are preserved.
 
 ---
 
@@ -193,7 +200,7 @@ mm schedule enable weekly
 | --- | --- |
 | Homebrew | `brew update` + `brew upgrade mm` — never overwrites Cellar files itself |
 | Git checkout | `git fetch` then `git pull --ff-only` if the tree is clean |
-| Standalone copy | Refuses; re-run `scripts/install.sh` from a clone |
+| Standalone copy | Refuses; from a clone run `make install` |
 
 `mm version` does **not** hit the network. If a previous self-update wrote `~/Library/Caches/mm/remote-version`, it will mention that a newer version was seen.
 

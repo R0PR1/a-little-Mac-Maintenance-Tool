@@ -65,7 +65,7 @@ mm_self_update() {
             ;;
         standalone)
             mm_error 'Standalone install detected. Automated self-update is unavailable.'
-            mm_hint 'Re-run scripts/install.sh from a cloned checkout, or install via Homebrew.'
+            mm_hint 'From a clone, run: make install'
             return 2
             ;;
         *)

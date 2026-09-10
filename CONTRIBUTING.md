@@ -10,6 +10,13 @@ make lint
 make test
 ```
 
+To install a local copy:
+
+```bash
+make install          # payload in ~/.local/share/mm, launcher in ~/.local/bin
+make link             # launcher pointing at this checkout
+```
+
 ## Rules of the road
 
 - Keep `bin/mm` as a router. Put logic in `lib/mm/*.sh`.
