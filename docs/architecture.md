@@ -15,6 +15,14 @@ bin/mm
   └─ self_update.sh   Homebrew vs git vs standalone
 ```
 
+## Installation
+
+`make install` copies `bin/`, `lib/mm/`, `launchd/`, `completions/`, and `VERSION` into `$(PREFIX)/share/mm` (default `~/.local/share/mm`) and writes a launcher at `$(PREFIX)/bin/mm`. The launcher `exec`s the real `bin/mm` with an absolute path.
+
+`bin/mm` also follows symlinks before locating `lib/mm`, so a Homebrew `bin/mm` symlink still works.
+
+`make link` skips the copy and points the launcher at the git checkout.
+
 ## Data on disk
 
 | Path | Role |

@@ -2,9 +2,29 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Follow symlinks so a launcher in ~/.local/bin (or Homebrew's bin/)
+# still finds lib/mm next to the real script, not ~/.local/lib/mm.
+mm_script_dir() {
+    local source="${BASH_SOURCE[0]}"
+    local dir
+    while [[ -L "$source" ]]; do
+        dir="$(cd "$(dirname "$source")" && pwd)" || return 1
+        source="$(readlink "$source")"
+        [[ "$source" != /* ]] && source="${dir}/${source}"
+    done
+    cd "$(dirname "$source")" && pwd
+}
+
+SCRIPT_DIR="$(mm_script_dir)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-LIB_DIR="$PROJECT_DIR/lib/mm"
+LIB_DIR="${MM_LIB_DIR:-$PROJECT_DIR/lib/mm}"
+
+if [[ ! -f "$LIB_DIR/output.sh" ]]; then
+    printf 'mm: cannot find libraries at %s\n' "$LIB_DIR" >&2
+    printf 'The command was launched from %s\n' "${BASH_SOURCE[0]}" >&2
+    printf 'Reinstall from a clone with: make install\n' >&2
+    exit 2
+fi
 
 # shellcheck source=../lib/mm/output.sh
 source "$LIB_DIR/output.sh"

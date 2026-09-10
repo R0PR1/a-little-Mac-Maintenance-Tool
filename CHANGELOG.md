@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Follow symlinks and install a real launcher so `~/.local/bin/mm` finds `lib/mm`
+- `make install`, `make uninstall`, `make reinstall`, and `make link` with `PREFIX`
+
 ## 0.1.0
 
 - `mm` / `mm status` dashboard with automation, Homebrew, system, and security
