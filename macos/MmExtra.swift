@@ -350,7 +350,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func runCheck() {
         if runningOverlay() != nil { return }
-        localRunning = Running(job: "update", pid: ProcessInfo.processInfo.processIdentifier, startedAt: Int(Date().timeIntervalSince1970))
+        localRunning = Running(job: "update", pid: Int(ProcessInfo.processInfo.processIdentifier), startedAt: Int(Date().timeIntervalSince1970))
         renderTitle()
         // brew update is verbose. Capturing stdout/stderr in pipes deadlocks once the
         // kernel pipe buffer fills, so Run check now never returned on a real Mac.
