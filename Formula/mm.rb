@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
-# Convenience copy of Formula/mm.rb for:
-#   brew install --HEAD --build-from-source packaging/homebrew/mm.rb
+# Homebrew tap of this repository (not homebrew/core — the name `mm` is too short
+# for core until a tagged release and a stable install base exist).
 #
-# Canonical tap entry point is Formula/mm.rb:
 #   brew tap r0pr1/mm https://github.com/R0PR1/a-little-Mac-Maintenance-Tool
 #   brew install r0pr1/mm/mm
+#
+# Head-only until a git tag exists. After tagging v0.1.0 on main:
+#   curl -L https://github.com/R0PR1/a-little-Mac-Maintenance-Tool/archive/refs/tags/v0.1.0.tar.gz | shasum -a 256
+# then add url/sha256 above `head`.
 
 class Mm < Formula
   desc "Tiny macOS health dashboard and safe Homebrew maintenance CLI"

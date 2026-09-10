@@ -6,6 +6,8 @@
 - `make install`, `make uninstall`, `make reinstall`, and `make link` with `PREFIX`
 - `mm status --json` snapshot for the menu extra, plus a run lock while jobs execute
 - macOS menu extra (`mm menubar enable`) with healthy / attention / running pips
+- Menu extra **Run check now** no longer deadlocks on `brew update` pipe output
+- Homebrew tap of this repo (`Formula/mm.rb`, head-only until a git tag)
 
 ## 0.1.0
 
