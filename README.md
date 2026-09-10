@@ -5,7 +5,7 @@
 `mm` is the command you run when you want a honest snapshot of a Mac — Homebrew drift, disk pressure, FileVault, Time Machine — without surprise upgrades, `sudo`, or a cleaner that deletes your files.
 
 <p align="center">
-  <img src="docs/assets/dashboard.svg" alt="mm status dashboard" width="880" />
+  <img src="docs/assets/dashboard.png" alt="mm status dashboard" width="880" />
 </p>
 
 <p align="center">
