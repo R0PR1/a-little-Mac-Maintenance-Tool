@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+if [[ "${1:-}" == '-productVersion' ]]; then
+    printf '%s\n' "${MM_MOCK_MACOS:-15.6}"
+    exit 0
+fi
+printf 'ProductName:\tmacOS\nProductVersion:\t%s\nBuildVersion:\t24G90\n' "${MM_MOCK_MACOS:-15.6}"

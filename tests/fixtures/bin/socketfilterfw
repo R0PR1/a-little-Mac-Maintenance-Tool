@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+if [[ "${MM_MOCK_FIREWALL:-on}" == 'on' ]]; then
+    printf 'Firewall is enabled. (State = 1)\n'
+else
+    printf 'Firewall is disabled. (State = 0)\n'
+fi

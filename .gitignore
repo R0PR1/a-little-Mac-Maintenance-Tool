@@ -1,0 +1,6 @@
+.DS_Store
+*.log
+coverage/
+.tmp/
+.mm-test-tmp/
+

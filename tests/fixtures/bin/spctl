@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+if [[ "${MM_MOCK_GATEKEEPER:-on}" == 'on' ]]; then
+    printf 'assessments enabled\n'
+else
+    printf 'assessments disabled\n'
+fi

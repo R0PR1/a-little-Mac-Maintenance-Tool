@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+if [[ "${1:-}" == '-g' && "${2:-}" == 'batt' ]]; then
+    if [[ "${MM_MOCK_BATTERY:-1}" == '0' ]]; then
+        printf 'Now drawing from '\''AC Power'\''\n'
+        exit 0
+    fi
+    printf 'Now drawing from '\''Battery Power'\''\n'
+    printf ' -InternalBattery-0 (id=1)\t%s%%; discharging; 5:12 remaining present: true\n' "${MM_MOCK_BATTERY_PCT:-94}"
+    exit 0
+fi
+if [[ "${1:-}" == '-g' && "${2:-}" == 'therm' ]]; then
+    printf '%s\n' "${MM_MOCK_THERM:-Note: No thermal warning level so far}"
+    exit 0
+fi
+exit 0

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+if [[ "${1:-}" == 'SPHardwareDataType' ]]; then
+    printf 'Hardware:\n\n    Hardware Overview:\n\n      Model Name: %s\n      Model Identifier: MacBookPro18,3\n' "${MM_MOCK_MODEL:-MacBook Pro}"
+    exit 0
+fi
+if [[ "${1:-}" == 'SPPowerDataType' ]]; then
+    printf '      Cycle Count: 412\n      Condition: Normal\n'
+    exit 0
+fi
+exit 0

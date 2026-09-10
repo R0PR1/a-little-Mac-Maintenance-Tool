@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+if [[ "${MM_MOCK_SIP:-on}" == 'on' ]]; then
+    printf 'System Integrity Protection status: enabled.\n'
+else
+    printf 'System Integrity Protection status: disabled.\n'
+fi

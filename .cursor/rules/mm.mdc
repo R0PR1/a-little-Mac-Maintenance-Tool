@@ -1,0 +1,29 @@
+---
+description: Engineering rules for the mm macOS maintenance CLI
+globs:
+  - "bin/**"
+  - "lib/**"
+  - "scripts/**"
+  - "tests/**"
+alwaysApply: true
+---
+
+# mm engineering rules
+
+- Preserve the public CLI described in `CURSOR.md`.
+- Keep `bin/mm` as a thin router. Put behavior in `lib/mm/*.sh`.
+- Use Bash with `set -euo pipefail` in executable scripts.
+- Keep ShellCheck clean.
+- Quote every variable expansion unless there is a deliberate, documented reason not to.
+- Never `source` user-editable config files. Parse only allow-listed keys.
+- `mm`, `mm status`, `mm doctor`, `mm security`, `mm logs`, and `mm version` are read-only.
+- Never invoke `sudo` automatically.
+- Never perform package upgrades unless the user explicitly invokes `mm upgrade` or enables the weekly opt-in.
+- Weekly automatic upgrades must default to disabled.
+- Cask upgrades must default to disabled.
+- Use `launchd`, not cron.
+- Support Apple Silicon and Intel Homebrew paths without assuming either one.
+- Add or update Bats tests for every behavior change.
+- Tests must mock system commands and must never mutate the developer's real Homebrew, LaunchAgents, security settings, or OS update settings.
+- Use exit codes 0 healthy/success, 1 attention/non-critical, 2 action-required/invalid operation, 64 usage error.
+- Prefer concise output and actionable remediation.

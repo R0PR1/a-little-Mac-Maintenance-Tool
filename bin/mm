@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+LIB_DIR="$PROJECT_DIR/lib/mm"
+
+# shellcheck source=../lib/mm/output.sh
+source "$LIB_DIR/output.sh"
+# shellcheck source=../lib/mm/utils.sh
+source "$LIB_DIR/utils.sh"
+# shellcheck source=../lib/mm/config.sh
+source "$LIB_DIR/config.sh"
+# shellcheck source=../lib/mm/brew.sh
+source "$LIB_DIR/brew.sh"
+# shellcheck source=../lib/mm/health.sh
+source "$LIB_DIR/health.sh"
+# shellcheck source=../lib/mm/macos.sh
+source "$LIB_DIR/macos.sh"
+# shellcheck source=../lib/mm/security.sh
+source "$LIB_DIR/security.sh"
+# shellcheck source=../lib/mm/launchd.sh
+source "$LIB_DIR/launchd.sh"
+# shellcheck source=../lib/mm/self_update.sh
+source "$LIB_DIR/self_update.sh"
+
+main() {
+    local command="${1:-status}"
+    shift || true
+
+    case "$command" in
+        status)
+            mm_status "$@"
+            ;;
+        update)
+            mm_brew_update "$@"
+            ;;
+        upgrade)
+            mm_brew_upgrade "$@"
+            ;;
+        doctor)
+            mm_doctor "$@"
+            ;;
+        security)
+            mm_security "$@"
+            ;;
+        logs)
+            mm_logs "$@"
+            ;;
+        config)
+            mm_config_command "$@"
+            ;;
+        schedule)
+            mm_schedule_command "$@"
+            ;;
+        self-update)
+            mm_self_update "$@"
+            ;;
+        version|--version|-v)
+            mm_version
+            ;;
+        help|--help|-h)
+            mm_help
+            ;;
+        internal)
+            mm_internal "$@"
+            ;;
+        *)
+            mm_error "Unknown command: $command"
+            mm_help >&2
+            return 64
+            ;;
+    esac
+}
+
+main "$@"
