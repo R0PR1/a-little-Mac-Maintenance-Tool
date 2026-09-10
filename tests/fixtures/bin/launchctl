@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+if [[ -n "${MM_MOCK_LOG:-}" ]]; then
+    printf 'launchctl %s\n' "$*" >> "$MM_MOCK_LOG"
+fi
+loaded="${MM_MOCK_LOADED_DIR:-/tmp/mm-launchctl-loaded}"
+mkdir -p "$loaded"
+cmd="${1:-}"
+shift || true
+case "$cmd" in
+    print)
+        target="${1:-}"
+        label="${target##*/}"
+        if [[ -f "$loaded/$label" ]]; then
+            printf 'state = running\n'
+            exit 0
+        fi
+        exit 1
+        ;;
+    bootstrap)
+        plist="${2:-}"
+        base="$(basename "${plist:-io.mm.daily.plist}")"
+        label="${base%.plist}"
+        touch "$loaded/$label"
+        ;;
+    bootout)
+        target="${1:-}"
+        label="${target##*/}"
+        rm -f "$loaded/$label"
+        ;;
+    kickstart)
+        exit 0
+        ;;
+    *)
+        exit 0
+        ;;
+esac

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>io.mm.weekly</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{{MM_BIN}}</string>
+    <string>internal</string>
+    <string>weekly</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key><integer>{{WEEKDAY}}</integer>
+    <key>Hour</key><integer>{{HOUR}}</integer>
+    <key>Minute</key><integer>{{MINUTE}}</integer>
+  </dict>
+  <key>StandardOutPath</key><string>{{LOG_DIR}}/weekly.log</string>
+  <key>StandardErrorPath</key><string>{{LOG_DIR}}/weekly.error.log</string>
+</dict>
+</plist>

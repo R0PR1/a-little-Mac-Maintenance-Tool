@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+printf 'The memory pressure is: %s\n' "${MM_MOCK_MEMORY:-nominal}"

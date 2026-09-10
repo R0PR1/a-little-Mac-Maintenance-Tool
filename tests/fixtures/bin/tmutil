@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+if [[ "${1:-}" == 'latestbackup' ]]; then
+    if [[ "${MM_MOCK_TM_BACKUP:-}" == 'none' ]]; then
+        exit 1
+    fi
+    printf '%s\n' "${MM_MOCK_TM_BACKUP:-/Volumes/Backup/Backups.backupdb/Mac/2026-09-10-051500}"
+    exit 0
+fi
+exit 0

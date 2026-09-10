@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+pct="${MM_MOCK_DISK_PCT:-54}"
+free="${MM_MOCK_DISK_FREE:-421Gi}"
+if [[ " $* " == *" -Pk "* ]]; then
+    printf 'Filesystem 1024-blocks Used Available Capacity Mounted on\n'
+    printf '/dev/disk1 100000000 50000000 46000000 %s%% /\n' "$pct"
+else
+    printf 'Filesystem Size Used Avail Capacity Mounted on\n'
+    printf '/dev/disk1 1.0Ti 500Gi %s %s%% /\n' "$free" "$pct"
+fi

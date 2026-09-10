@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+if [[ "${MM_MOCK_FILEVAULT:-on}" == 'on' ]]; then
+    printf 'FileVault is On.\n'
+else
+    printf 'FileVault is Off.\n'
+fi

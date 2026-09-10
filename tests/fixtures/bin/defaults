@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+key="${3:-}"
+case "$key" in
+    AutomaticCheckEnabled) printf '%s\n' "${MM_MOCK_AUTO_CHECK:-1}" ;;
+    AutomaticDownload) printf '%s\n' "${MM_MOCK_AUTO_DOWNLOAD:-1}" ;;
+    AutomaticallyInstallMacOSUpdates) printf '%s\n' "${MM_MOCK_AUTO_INSTALL:-0}" ;;
+    CriticalUpdateInstall) printf '1\n' ;;
+    *) exit 1 ;;
+esac

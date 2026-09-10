@@ -1,0 +1,7 @@
+shell=bash
+severity=warning
+external-sources=true
+source-path=SCRIPTDIR
+source-path=lib/mm
+source-path=lib
+disable=SC1091

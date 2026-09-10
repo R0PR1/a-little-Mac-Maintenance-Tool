@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+if [[ -n "${MM_MOCK_LOG:-}" ]]; then
+    printf 'brew %s\n' "$*" >> "$MM_MOCK_LOG"
+fi
+cmd="${1:-}"
+shift || true
+case "$cmd" in
+    --prefix)
+        printf '%s\n' "${MM_MOCK_BREW_PREFIX:-/opt/homebrew}"
+        ;;
+    update)
+        printf 'Updated Homebrew.\n'
+        ;;
+    outdated)
+        kind="formula"
+        if [[ "${1:-}" == '--cask' ]]; then kind="cask"; fi
+        if [[ "${1:-}" == '--formula' ]]; then kind="formula"; fi
+        if [[ "$kind" == 'cask' ]]; then
+            n="${MM_MOCK_OUTDATED_CASKS:-0}"
+            prefix="cask"
+        else
+            n="${MM_MOCK_OUTDATED_FORMULAE:-0}"
+            prefix="formula"
+        fi
+        i=1
+        while [[ "$i" -le "$n" ]]; do
+            printf '%s-%s\n' "$prefix" "$i"
+            i=$((i + 1))
+        done
+        ;;
+    upgrade)
+        if [[ "${MM_MOCK_FORBID_UPGRADE:-0}" == '1' ]]; then
+            printf 'unexpected brew upgrade\n' >&2
+            exit 1
+        fi
+        printf 'brew upgrade %s\n' "$*"
+        ;;
+    cleanup)
+        printf 'brew cleanup\n'
+        ;;
+    doctor)
+        if [[ "${MM_MOCK_BREW_DOCTOR_FAIL:-0}" == '1' ]]; then
+            printf 'Warning: something looks odd\n' >&2
+            exit 1
+        fi
+        printf 'Your system is ready to brew.\n'
+        ;;
+    list)
+        if [[ "${1:-}" == '--formula' && "${2:-}" == 'mm' ]]; then
+            if [[ "${MM_MOCK_BREW_HAS_MM:-0}" == '1' ]]; then
+                printf 'mm\n'
+                exit 0
+            fi
+            exit 1
+        fi
+        if [[ "${1:-}" == '--versions' && "${2:-}" == 'mm' ]]; then
+            printf 'mm 0.1.0\n'
+            exit 0
+        fi
+        if [[ "${1:-}" == '--formula' ]]; then
+            if [[ "${MM_MOCK_BREW_HAS_MM:-0}" == '1' ]]; then
+                printf 'mm\n'
+            fi
+            exit 0
+        fi
+        ;;
+    *)
+        exit 0
+        ;;
+esac

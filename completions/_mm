@@ -1,0 +1,65 @@
+#compdef mm
+
+_mm() {
+  local -a commands config_keys schedule_cmds log_targets
+  local line state
+
+  commands=(
+    'status:Show the health dashboard'
+    'update:Refresh Homebrew metadata'
+    'upgrade:Upgrade Homebrew formulae'
+    'doctor:Show detailed diagnostics'
+    'security:Show security status'
+    'logs:Show maintenance logs'
+    'config:Show or edit configuration'
+    'schedule:Manage launchd automation'
+    'self-update:Update mm'
+    'version:Show mm version'
+    'help:Show help'
+  )
+
+  config_keys=(
+    daily_enabled daily_hour daily_minute
+    weekly_enabled weekly_day weekly_hour weekly_minute weekly_upgrade
+    upgrade_casks cleanup
+    check_macos check_battery check_time_machine check_thermal
+    disk_warning disk_critical
+  )
+
+  schedule_cmds=(status enable disable reload)
+  log_targets=(daily weekly --follow)
+
+  _arguments -C \
+    '(-h --help)'{-h,--help}'[Show help]' \
+    '(-v --version)'{-v,--version}'[Show version]' \
+    '1:command:->command' \
+    '*::arg:->args'
+
+  case $state in
+    command)
+      _describe -t commands 'mm command' commands
+      ;;
+    args)
+      case ${words[1]} in
+        config)
+          _arguments \
+            '1:subcommand:(show get set reset)' \
+            '2:key:($config_keys)' \
+            '3:value:'
+          ;;
+        schedule)
+          _arguments \
+            '1:subcommand:($schedule_cmds)' \
+            '2:job:(daily weekly)'
+          ;;
+        logs)
+          _arguments '1:target:($log_targets)'
+          ;;
+        upgrade)
+          _arguments '--casks[Also upgrade casks]'
+          ;;
+      esac
+      ;;
+  esac
+}
+
