@@ -15,7 +15,7 @@ mm_die() {
 mm_required_files() {
     local root="$1"
     local rel
-    for rel in bin/mm lib/mm/output.sh lib/mm/utils.sh VERSION launchd/mm.daily.plist.template; do
+    for rel in bin/mm lib/mm/output.sh lib/mm/utils.sh lib/mm/json.sh macos/MmExtra.swift scripts/build-menubar.sh VERSION launchd/mm.daily.plist.template; do
         [[ -e "$root/$rel" ]] || return 1
     done
 }
@@ -41,13 +41,15 @@ EOF
 
 mm_copy_payload() {
     local dest="$1"
-    mkdir -p "$dest/bin" "$dest/lib/mm" "$dest/launchd" "$dest/completions"
+    mkdir -p "$dest/bin" "$dest/lib/mm" "$dest/launchd" "$dest/completions" "$dest/macos" "$dest/scripts"
     cp "$ROOT_DIR/bin/mm" "$dest/bin/mm"
     cp "$ROOT_DIR/lib/mm/"*.sh "$dest/lib/mm/"
     cp "$ROOT_DIR/launchd/"*.template "$dest/launchd/"
+    cp "$ROOT_DIR/macos/MmExtra.swift" "$dest/macos/MmExtra.swift"
+    cp "$ROOT_DIR/scripts/build-menubar.sh" "$dest/scripts/build-menubar.sh"
     cp "$ROOT_DIR/VERSION" "$dest/VERSION"
     cp "$ROOT_DIR/completions/_mm" "$dest/completions/_mm"
-    chmod 755 "$dest/bin/mm"
+    chmod 755 "$dest/bin/mm" "$dest/scripts/build-menubar.sh"
 }
 
 [[ "$INSTALL_DIR" != "/" && "$INSTALL_DIR" != "$HOME" ]] || mm_die "refusing to install into $INSTALL_DIR"

@@ -123,6 +123,7 @@ Colors appear only when stdout is a TTY. Missing tools degrade to `unavailable` 
 | `mm logs` `[daily\|weekly\|--follow]` | no | Read `~/Library/Logs/mm/` |
 | `mm config` | config file | Show / get / set / reset keys |
 | `mm schedule` | launchd | Enable, disable, reload LaunchAgents |
+| `mm menubar` | launchd | macOS menu extra next to the clock |
 | `mm self-update` | install tree | Homebrew **or** git fast-forward, never both |
 | `mm version` | no | Local version, plus a cached remote hint if one exists |
 
@@ -191,6 +192,20 @@ Daily checks refresh Homebrew metadata. Weekly **upgrades** stay off until:
 mm config set weekly_upgrade true
 mm schedule enable weekly
 ```
+
+---
+
+## Menu extra (macOS)
+
+A tiny `mm ●` item in the menu bar (next to the clock). Sage = healthy, amber = attention, pulsing sage = a job is running.
+
+```bash
+mm menubar enable
+mm menubar status
+mm menubar disable
+```
+
+Requires **Xcode Command Line Tools** (`swiftc`). Click the extra for disk, battery, Time Machine, Homebrew, then Open Dashboard / Run check now / Upgrade formulae (only when outdated).
 
 ---
 

@@ -8,6 +8,8 @@ Read-only dashboard. Exit `1` when something needs attention, `2` when a health 
 
 Sections: automation, Homebrew, system (disk, memory, thermal, battery, Time Machine, macOS update policy), security (FileVault, SIP, Gatekeeper).
 
+`mm status --json` (also `mm --json`) prints the same snapshot as a JSON object for the menu extra and writes `~/Library/Caches/mm/last-status.json`. Exit codes are unchanged.
+
 ## `mm update`
 
 Runs `brew update`, then lists outdated formulae and casks. Never upgrades.
@@ -52,6 +54,16 @@ mm schedule reload
 ```
 
 Plists are rendered from `launchd/mm.*.plist.template` and loaded with `launchctl bootstrap` / `bootout` / `kickstart` in the `gui/$UID` domain.
+
+## `mm menubar`
+
+```text
+mm menubar status
+mm menubar enable
+mm menubar disable
+```
+
+macOS only. `enable` builds `macos/MmExtra.swift` with `swiftc` (Xcode CLT), installs `~/Library/LaunchAgents/io.mm.menubar.plist`, and keeps the extra alive next to the clock. The extra polls `mm status --json`. Upgrade from the menu is explicit (opens Terminal). `Quit mm extra` bootstraps out the agent so KeepAlive does not restart it.
 
 ## `mm self-update`
 

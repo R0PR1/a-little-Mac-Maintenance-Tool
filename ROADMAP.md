@@ -60,4 +60,5 @@
 - Homebrew formula finalization (checksum after first tag)
 - release checksum workflow
 - CI on Ubuntu (mocked) and macOS runners
+- macOS menu extra
 - v1.0.0 release checklist

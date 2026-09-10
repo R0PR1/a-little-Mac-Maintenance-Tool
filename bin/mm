@@ -44,20 +44,27 @@ source "$LIB_DIR/security.sh"
 source "$LIB_DIR/launchd.sh"
 # shellcheck source=../lib/mm/self_update.sh
 source "$LIB_DIR/self_update.sh"
+# shellcheck source=../lib/mm/json.sh
+source "$LIB_DIR/json.sh"
+# shellcheck source=../lib/mm/menubar.sh
+source "$LIB_DIR/menubar.sh"
 
 main() {
     local command="${1:-status}"
     shift || true
 
     case "$command" in
+        --json)
+            mm_status --json
+            ;;
         status)
             mm_status "$@"
             ;;
         update)
-            mm_brew_update "$@"
+            mm_run_locked update mm_brew_update "$@"
             ;;
         upgrade)
-            mm_brew_upgrade "$@"
+            mm_run_locked upgrade mm_brew_upgrade "$@"
             ;;
         doctor)
             mm_doctor "$@"
@@ -73,6 +80,9 @@ main() {
             ;;
         schedule)
             mm_schedule_command "$@"
+            ;;
+        menubar)
+            mm_menubar_command "$@"
             ;;
         self-update)
             mm_self_update "$@"

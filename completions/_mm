@@ -1,7 +1,7 @@
 #compdef mm
 
 _mm() {
-  local -a commands config_keys schedule_cmds log_targets
+  local -a commands config_keys schedule_cmds menubar_cmds log_targets
   local line state
 
   commands=(
@@ -13,6 +13,7 @@ _mm() {
     'logs:Show maintenance logs'
     'config:Show or edit configuration'
     'schedule:Manage launchd automation'
+    'menubar:Enable the macOS menu extra'
     'self-update:Update mm'
     'version:Show mm version'
     'help:Show help'
@@ -27,6 +28,7 @@ _mm() {
   )
 
   schedule_cmds=(status enable disable reload)
+  menubar_cmds=(status enable disable)
   log_targets=(daily weekly --follow)
 
   _arguments -C \
@@ -54,6 +56,12 @@ _mm() {
           ;;
         logs)
           _arguments '1:target:($log_targets)'
+          ;;
+        status)
+          _arguments '--json[Machine-readable snapshot for the menu extra]'
+          ;;
+        menubar)
+          _arguments '1:subcommand:($menubar_cmds)'
           ;;
         upgrade)
           _arguments '--casks[Also upgrade casks]'
