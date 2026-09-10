@@ -239,6 +239,18 @@ mm_host_header() {
         macos='unknown'
     fi
 
+    if [[ "${MM_RECORD:-0}" == '1' ]]; then
+        # Consumed by lib/mm/json.sh
+        # shellcheck disable=SC2034
+        MM_SNAP_VERSION="$version"
+        # shellcheck disable=SC2034
+        MM_SNAP_MODEL="$model"
+        # shellcheck disable=SC2034
+        MM_SNAP_MACOS="$macos"
+        # shellcheck disable=SC2034
+        MM_SNAP_ARCH="$arch"
+    fi
+
     printf 'MM %s\n' "$version"
     printf '%s · macOS %s · %s\n' "$model" "$macos" "$arch"
 }
@@ -285,6 +297,11 @@ mm_automation_status() {
 
 mm_status() {
     local formula_count=0
+
+    if [[ "${1:-}" == '--json' ]]; then
+        mm_status_json
+        return
+    fi
 
     MM_EXIT_STATE=0
     mm_config_ensure
@@ -413,26 +430,34 @@ mm_internal() {
 
     case "$command" in
         daily)
-            printf '=== %s daily ===\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')"
-            if mm_brew_present; then
-                mm_brew_update
-            else
-                printf 'Homebrew not installed; skipped brew update.\n'
-            fi
+            mm_run_locked "daily" mm_internal_daily
             ;;
         weekly)
-            printf '=== %s weekly ===\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')"
-            if [[ "$(mm_config_get weekly_upgrade)" == 'true' ]]; then
-                mm_brew_upgrade
-            elif mm_brew_present; then
-                mm_brew_update
-            else
-                printf 'Homebrew not installed; skipped brew update.\n'
-            fi
+            mm_run_locked "weekly" mm_internal_weekly
             ;;
         *)
             mm_error 'Unknown internal command.'
             return 64
             ;;
     esac
+}
+
+mm_internal_daily() {
+    printf '=== %s daily ===\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')"
+    if mm_brew_present; then
+        mm_brew_update
+    else
+        printf 'Homebrew not installed; skipped brew update.\n'
+    fi
+}
+
+mm_internal_weekly() {
+    printf '=== %s weekly ===\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')"
+    if [[ "$(mm_config_get weekly_upgrade)" == 'true' ]]; then
+        mm_brew_upgrade
+    elif mm_brew_present; then
+        mm_brew_update
+    else
+        printf 'Homebrew not installed; skipped brew update.\n'
+    fi
 }

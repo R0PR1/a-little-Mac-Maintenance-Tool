@@ -18,5 +18,5 @@ fi
 
 printf 'Launcher removed: %s\n' "$BIN_PATH"
 printf 'User configuration (~/.config/mm) and logs (~/Library/Logs/mm) were preserved.\n'
-printf 'Disable leftover agents with: mm schedule disable daily; mm schedule disable weekly\n'
+printf 'Disable leftover agents with: mm schedule disable daily; mm schedule disable weekly; mm menubar disable\n'
 printf '(run that before uninstalling, from the install you are removing.)\n'

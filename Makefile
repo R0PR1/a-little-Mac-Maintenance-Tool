@@ -4,7 +4,7 @@ PREFIX  ?= $(HOME)/.local
 BINDIR  ?= $(PREFIX)/bin
 DATADIR ?= $(PREFIX)/share/mm
 
-.PHONY: help syntax lint test install uninstall reinstall link
+.PHONY: help syntax lint test install uninstall reinstall link menubar
 
 help:
 	@printf '%s\n' \
@@ -15,6 +15,7 @@ help:
 		'make uninstall     Remove the launcher and copied payload' \
 		'make reinstall     uninstall then install' \
 		'make link          Launcher in $(BINDIR) pointing at this checkout' \
+		'make menubar       Build the macOS menu extra (macOS + swiftc)' \
 		'' \
 		'PREFIX=$(PREFIX)' \
 		'Override with: make install PREFIX=$$HOME/.local'
@@ -38,3 +39,6 @@ reinstall: uninstall install
 
 link:
 	PREFIX="$(PREFIX)" MM_BIN_DIR="$(BINDIR)" MM_LINK_CHECKOUT=1 ./scripts/install.sh
+
+menubar:
+	./scripts/build-menubar.sh

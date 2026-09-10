@@ -4,6 +4,8 @@
 
 - Follow symlinks and install a real launcher so `~/.local/bin/mm` finds `lib/mm`
 - `make install`, `make uninstall`, `make reinstall`, and `make link` with `PREFIX`
+- `mm status --json` snapshot for the menu extra, plus a run lock while jobs execute
+- macOS menu extra (`mm menubar enable`) with healthy / attention / running pips
 
 ## 0.1.0
 
