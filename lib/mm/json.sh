@@ -52,10 +52,11 @@ mm_json_disk() {
     value="${found#*$'\t'}"
     pct="$(printf '%s' "$value" | grep -Eo '^[0-9]+' || true)"
     free="$(printf '%s' "$value" | sed -n 's/^[0-9]*% · \(.*\) free$/\1/p')"
-    printf '{"state":%s,"percent":%s,"free":%s}' \
+    printf '{"state":%s,"percent":%s,"free":%s,"detail":%s}' \
         "$(mm_json_str "$state")" \
         "${pct:-null}" \
-        "$(mm_json_str "${free}")"
+        "$(mm_json_str "${free}")" \
+        "$(mm_json_str "$value")"
 }
 
 mm_json_battery() {
@@ -78,19 +79,49 @@ mm_json_battery() {
 
 mm_json_homebrew() {
     local brew_found brew_state formulae_found formulae_detail formulae_n
+    local casks_found casks_detail casks_n
     if ! brew_found="$(mm_snap_lookup Homebrew)"; then
         printf 'null'
         return 0
     fi
     brew_state="${brew_found%%$'\t'*}"
     formulae_n=0
+    casks_n=0
     if formulae_found="$(mm_snap_lookup Formulae)"; then
         formulae_detail="${formulae_found#*$'\t'}"
         if [[ "$formulae_detail" =~ ^([0-9]+)\ outdated$ ]]; then
             formulae_n="${BASH_REMATCH[1]}"
         fi
     fi
-    printf '{"state":%s,"formulae_outdated":%s}' "$(mm_json_str "$brew_state")" "$formulae_n"
+    if casks_found="$(mm_snap_lookup Casks)"; then
+        casks_detail="${casks_found#*$'\t'}"
+        if [[ "$casks_detail" =~ ^([0-9]+)\ outdated$ ]]; then
+            casks_n="${BASH_REMATCH[1]}"
+        fi
+    fi
+    printf '{"state":%s,"formulae_outdated":%s,"casks_outdated":%s}' \
+        "$(mm_json_str "$brew_state")" "$formulae_n" "$casks_n"
+}
+
+mm_json_issues() {
+    local line state label value rest first=1
+    printf '['
+    for line in "${MM_SNAP_LINES[@]+"${MM_SNAP_LINES[@]}"}"; do
+        state="${line%%|*}"
+        [[ "$state" == 'warn' || "$state" == 'error' ]] || continue
+        rest="${line#*|}"
+        label="${rest%%|*}"
+        value="${rest#*|}"
+        # Skip the summary STATUS line; the overall field already covers it.
+        [[ "$label" == 'STATUS' ]] && continue
+        [[ "$first" -eq 1 ]] || printf ','
+        first=0
+        printf '{"label":%s,"detail":%s,"state":%s}' \
+            "$(mm_json_str "$label")" \
+            "$(mm_json_str "$value")" \
+            "$(mm_json_str "$state")"
+    done
+    printf ']'
 }
 
 mm_json_running() {
@@ -141,10 +172,13 @@ mm_status_json() {
 
     overall="$(mm_json_overall)"
     payload="$(cat <<EOF
-{"version":$(mm_json_str "${MM_SNAP_VERSION:-$(mm_version_value)}"),"overall":$(mm_json_str "$overall"),"exit":${MM_EXIT_STATE:-0},"checked_at":$(mm_now),"running":$(mm_json_running),"host":{"model":$(mm_json_str "${MM_SNAP_MODEL:-Mac}"),"macos":$(mm_json_str "${MM_SNAP_MACOS:-unknown}"),"arch":$(mm_json_str "${MM_SNAP_ARCH:-$(uname -m)}")},"disk":$(mm_json_disk),"battery":$(mm_json_battery),"time_machine":$(mm_json_item 'Time Machine'),"homebrew":$(mm_json_homebrew),"automation":{"daily":$(mm_json_item 'Daily check'),"weekly":$(mm_json_item 'Weekly upgrade')},"hints":$(mm_json_hints)}
+{"version":$(mm_json_str "${MM_SNAP_VERSION:-$(mm_version_value)}"),"overall":$(mm_json_str "$overall"),"exit":${MM_EXIT_STATE:-0},"checked_at":$(mm_now),"running":$(mm_json_running),"host":{"model":$(mm_json_str "${MM_SNAP_MODEL:-Mac}"),"macos":$(mm_json_str "${MM_SNAP_MACOS:-unknown}"),"arch":$(mm_json_str "${MM_SNAP_ARCH:-$(uname -m)}")},"disk":$(mm_json_disk),"battery":$(mm_json_battery),"time_machine":$(mm_json_item 'Time Machine'),"homebrew":$(mm_json_homebrew),"automation":{"daily":$(mm_json_item 'Daily check'),"weekly":$(mm_json_item 'Weekly upgrade')},"filevault":$(mm_json_item 'FileVault'),"issues":$(mm_json_issues),"hints":$(mm_json_hints)}
 EOF
 )"
     mkdir -p "$MM_CACHE_DIR"
-    printf '%s\n' "$payload" | tee "$MM_STATUS_CACHE"
+    # Write the cache before printing. A consumer that captures stdout in a pipe
+    # and only drains after exit (Swift Process) can deadlock on tee(1).
+    printf '%s\n' "$payload" > "$MM_STATUS_CACHE"
+    printf '%s\n' "$payload"
     return "$MM_EXIT_STATE"
 }

@@ -8,17 +8,48 @@ struct Snapshot: Decodable {
     var checkedAt: Int
     var running: Running?
     var host: Host
-    var disk: Item?
+    var disk: Disk?
     var battery: Battery?
     var timeMachine: Item?
     var homebrew: Homebrew?
     var automation: Automation
+    var filevault: Item?
+    var issues: [Issue]
     var hints: [String]
 
     enum CodingKeys: String, CodingKey {
-        case version, overall, exit, running, host, disk, battery, homebrew, automation, hints
+        case version, overall, exit, running, host, disk, battery, homebrew, automation, filevault, issues, hints
         case checkedAt = "checked_at"
         case timeMachine = "time_machine"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        version = try c.decode(String.self, forKey: .version)
+        overall = try c.decode(String.self, forKey: .overall)
+        exit = try c.decode(Int.self, forKey: .exit)
+        checkedAt = try c.decode(Int.self, forKey: .checkedAt)
+        running = try c.decodeIfPresent(Running.self, forKey: .running)
+        host = try c.decode(Host.self, forKey: .host)
+        disk = try c.decodeIfPresent(Disk.self, forKey: .disk)
+        battery = try c.decodeIfPresent(Battery.self, forKey: .battery)
+        timeMachine = try c.decodeIfPresent(Item.self, forKey: .timeMachine)
+        homebrew = try c.decodeIfPresent(Homebrew.self, forKey: .homebrew)
+        automation = try c.decode(Automation.self, forKey: .automation)
+        filevault = try c.decodeIfPresent(Item.self, forKey: .filevault)
+        issues = try c.decodeIfPresent([Issue].self, forKey: .issues) ?? []
+        hints = try c.decodeIfPresent([String].self, forKey: .hints) ?? []
+    }
+}
+
+struct Issue: Decodable {
+    var label: String
+    var detail: String
+    var state: String
+
+    var menuLine: String {
+        if detail.isEmpty { return label }
+        return "\(label) — \(detail)"
     }
 }
 
@@ -43,6 +74,20 @@ struct Item: Decodable {
     var detail: String
 }
 
+struct Disk: Decodable {
+    var state: String
+    var percent: Int?
+    var free: String?
+    var detail: String?
+
+    var menuDetail: String {
+        if let detail, !detail.isEmpty { return detail }
+        if let percent, let free, !free.isEmpty { return "\(percent)% · \(free) free" }
+        if let percent { return "\(percent)%" }
+        return "—"
+    }
+}
+
 struct Battery: Decodable {
     var state: String
     var percent: Int?
@@ -52,9 +97,18 @@ struct Battery: Decodable {
 struct Homebrew: Decodable {
     var state: String
     var formulaeOutdated: Int
+    var casksOutdated: Int
     enum CodingKeys: String, CodingKey {
         case state
         case formulaeOutdated = "formulae_outdated"
+        case casksOutdated = "casks_outdated"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        state = try c.decode(String.self, forKey: .state)
+        formulaeOutdated = try c.decodeIfPresent(Int.self, forKey: .formulaeOutdated) ?? 0
+        casksOutdated = try c.decodeIfPresent(Int.self, forKey: .casksOutdated) ?? 0
     }
 }
 
@@ -71,6 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var pulseOn = true
     private var inflight: [Process] = []
     private var localRunning: Running?
+    private var statusInFlight = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -152,16 +207,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func refresh(force: Bool) {
-        if !force, let cached = loadCached() {
+        // Always paint from cache first. force:true used to skip this, so a hung
+        // status --json left the menu on "waiting for first check" forever.
+        if let cached = loadCached() {
             snapshot = cached
             renderTitle()
+        } else if force {
+            renderTitle()
         }
-        runMm(["status", "--json"]) { [weak self] data, _ in
-            if let data, let snap = try? JSONDecoder().decode(Snapshot.self, from: data) {
-                self?.snapshot = snap
-            } else if force {
-                self?.snapshot = self?.loadCached()
-            }
+        if statusInFlight { return }
+        statusInFlight = true
+        // Discard stdout. mm status --json tees JSON into a pipe; reading only in
+        // terminationHandler deadlocks once the pipe buffer fills (same class of
+        // bug as Run check now / brew update). The snapshot is already on disk.
+        runMm(["status", "--json"], captureOutput: false) { [weak self] _, _ in
+            self?.statusInFlight = false
+            self?.snapshot = self?.loadCached() ?? self?.snapshot
             self?.renderTitle()
         }
     }
@@ -211,7 +272,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             return "mm · running \(run.job)"
         }
         if let snap = snapshot {
-            return "mm · \(snap.overall)"
+            if snap.issues.isEmpty {
+                return "mm · \(snap.overall)"
+            }
+            let head = snap.issues.prefix(3).map(\.menuLine).joined(separator: " · ")
+            return "mm · \(snap.overall) · \(head)"
         }
         return "mm"
     }
@@ -233,14 +298,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
-        addRow(menu, "Disk", snap?.disk?.detail ?? "—")
+
+        let issues = snap?.issues ?? []
+        if !issues.isEmpty {
+            addHeader(menu, "Needs attention")
+            for issue in issues {
+                addIssue(menu, issue.menuLine)
+            }
+            menu.addItem(.separator())
+        }
+
+        addRow(menu, "Disk", snap?.disk?.menuDetail ?? "—")
         if let battery = snap?.battery {
             addRow(menu, "Battery", battery.detail)
         }
-        addRow(menu, "Time Machine", snap?.timeMachine?.detail ?? "—")
-        if let brew = snap?.homebrew {
-            let detail = brew.formulaeOutdated > 0 ? "\(brew.formulaeOutdated) outdated" : "up to date"
-            addRow(menu, "Homebrew", detail)
+        if issues.isEmpty {
+            addRow(menu, "Time Machine", snap?.timeMachine?.detail ?? "—")
+            if let brew = snap?.homebrew {
+                var parts: [String] = []
+                if brew.formulaeOutdated > 0 { parts.append("\(brew.formulaeOutdated) formulae") }
+                if brew.casksOutdated > 0 { parts.append("\(brew.casksOutdated) casks") }
+                let detail = parts.isEmpty ? "up to date" : "\(parts.joined(separator: ", ")) outdated"
+                addRow(menu, "Homebrew", detail)
+            }
+            if let fv = snap?.filevault {
+                addRow(menu, "FileVault", fv.detail)
+            }
         }
 
         menu.addItem(.separator())
@@ -248,13 +331,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let check = addAction(menu, "Run check now", #selector(runCheck))
         if run != nil { check.isEnabled = false }
 
-        let outdated = snap?.homebrew?.formulaeOutdated ?? 0
+        let formulaeOutdated = snap?.homebrew?.formulaeOutdated ?? 0
+        let casksOutdated = snap?.homebrew?.casksOutdated ?? 0
         let upgrade = addAction(menu, "Upgrade formulae…", #selector(openUpgrade))
-        upgrade.isEnabled = outdated > 0 && run == nil
+        upgrade.isEnabled = formulaeOutdated > 0 && run == nil
+        if casksOutdated > 0 && formulaeOutdated == 0 {
+            let caskHint = addMutedAction(menu, "Casks outdated — use: mm upgrade --casks")
+            caskHint.isEnabled = false
+        }
 
         addAction(menu, "Open logs", #selector(openLogs))
         menu.addItem(.separator())
         addAction(menu, "Quit mm extra", #selector(quitExtra))
+    }
+
+    private func addIssue(_ menu: NSMenu, _ title: String) {
+        let item = NSMenuItem(title: "!  \(title)", action: nil, keyEquivalent: "")
+        item.isEnabled = false
+        menu.addItem(item)
+    }
+
+    @discardableResult
+    private func addMutedAction(_ menu: NSMenu, _ title: String) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        item.isEnabled = false
+        menu.addItem(item)
+        return item
     }
 
     private func addHeader(_ menu: NSMenu, _ title: String) {

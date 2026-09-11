@@ -13,7 +13,10 @@ setup() {
     python3 -c 'import json,sys; json.load(sys.stdin)' <<<"$output"
     [[ "$output" == *'"overall":"healthy"'* ]]
     [[ "$output" == *'"formulae_outdated":0'* ]]
+    [[ "$output" == *'"casks_outdated":0'* ]]
     [[ "$output" == *'"percent":54'* ]]
+    [[ "$output" == *'"detail":"54% · 421Gi free"'* ]]
+    [[ "$output" == *'"issues":[]'* ]]
 }
 
 @test "mm --json is an alias for status --json" {
@@ -29,6 +32,26 @@ setup() {
     [[ "$output" == *'"overall":"attention"'* ]]
     [[ "$output" == *'"formulae_outdated":3'* ]]
     [[ "$output" == *'"mm upgrade"'* ]]
+    [[ "$output" == *'"label":"Formulae"'* ]]
+    [[ "$output" == *'"detail":"3 outdated"'* ]]
+}
+
+@test "status --json issues list Time Machine FileVault and Casks" {
+    export MM_MOCK_TM_BACKUP=none
+    export MM_MOCK_FILEVAULT=off
+    export MM_MOCK_OUTDATED_CASKS=1
+    run "$MM_BIN" status --json
+    [ "$status" -eq 1 ]
+    python3 -c '
+import json,sys
+d=json.load(sys.stdin)
+labels={i["label"]:i["detail"] for i in d["issues"]}
+assert labels.get("Time Machine")=="no backup", labels
+assert labels.get("FileVault")=="disabled", labels
+assert labels.get("Casks")=="1 outdated", labels
+assert d["filevault"]["detail"]=="disabled"
+assert d["homebrew"]["casks_outdated"]==1
+' <<<"$output"
 }
 
 @test "status --json critical disk is action" {

@@ -7,6 +7,10 @@
 - `mm status --json` snapshot for the menu extra, plus a run lock while jobs execute
 - macOS menu extra (`mm menubar enable`) with healthy / attention / running pips
 - Menu extra **Run check now** no longer deadlocks on `brew update` pipe output
+- Menu extra no longer deadlocks on `status --json` pipe output (was stuck on “waiting for first check”)
+- Menu extra decodes disk JSON (`percent`/`free`) instead of requiring a missing `detail` field
+- Menu extra lists clear **Needs attention** lines (Time Machine, FileVault, Casks, …)
+- Compact security lines are recorded in the JSON snapshot
 - Homebrew tap of this repo (`Formula/mm.rb`, head-only until a git tag)
 
 ## 0.1.0

@@ -65,6 +65,7 @@ mm_security_report_item() {
     case "$state" in
         on)
             if [[ "$compact" -eq 1 ]]; then
+                mm_record_line ok "$label" 'enabled'
                 mm_ok "$label"
             else
                 mm_line_ok "$label" 'enabled'
@@ -72,6 +73,7 @@ mm_security_report_item() {
             ;;
         off)
             if [[ "$compact" -eq 1 ]]; then
+                mm_record_line warn "$label" 'disabled'
                 mm_warn "$label"
             else
                 mm_line_warn "$label" 'disabled'
@@ -80,6 +82,7 @@ mm_security_report_item() {
             ;;
         *)
             if [[ "$compact" -eq 1 ]]; then
+                mm_record_line disabled "$label" 'unavailable'
                 mm_disabled "$label"
             else
                 mm_line_disabled "$label" 'unavailable'
