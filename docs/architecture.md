@@ -27,6 +27,8 @@ The macOS menu extra lives in `macos/MmExtra.swift` and is built by `scripts/bui
 
 `make link` skips the copy and points the launcher at the git checkout.
 
+Homebrew installs via [`Formula/mm.rb`](../Formula/mm.rb): a wrapper in `#{prefix}/bin/mm` execs `libexec/bin/mm`. See [homebrew.md](homebrew.md).
+
 ## Data on disk
 
 | Path | Role |

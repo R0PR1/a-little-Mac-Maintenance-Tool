@@ -50,3 +50,37 @@ setup() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"disabled"* || "$output" == *"enabled"* || "$output" == *"not loaded"* ]]
 }
+
+@test "menubar user PATH includes Homebrew prefixes" {
+    load_mm_libs
+    # shellcheck source=/dev/null
+    source "$BATS_TEST_DIRNAME/../lib/mm/menubar.sh"
+    run mm_menubar_user_path
+    [ "$status" -eq 0 ]
+    [[ "$output" == "$HOME/.local/bin:"* ]]
+    [[ "$output" == *"/opt/homebrew/bin"* ]]
+    [[ "$output" == *"/usr/local/bin"* ]]
+}
+
+@test "menubar plist sets PATH and MM_BIN" {
+    load_mm_libs
+    # shellcheck source=/dev/null
+    source "$BATS_TEST_DIRNAME/../lib/mm/menubar.sh"
+    extra="$BATS_TEST_TMPDIR/fake-extra"
+    printf '%s\n' '#!/bin/sh' > "$extra"
+    chmod +x "$extra"
+    mm_menubar_write_plist "$extra"
+    plist="$(mm_menubar_plist_path)"
+    [[ -f "$plist" ]]
+    grep -q '<string>io.mm.menubar</string>' "$plist"
+    grep -A1 '<key>PATH</key>' "$plist" | grep -q '/opt/homebrew/bin'
+    grep -A1 '<key>PATH</key>' "$plist" | grep -q '.local/bin'
+    grep -A1 '<key>MM_BIN</key>' "$plist" | grep -q 'mm'
+}
+
+@test "menu extra discards update stdout to avoid pipe deadlock" {
+    src="$BATS_TEST_DIRNAME/../macos/MmExtra.swift"
+    grep -q 'captureOutput: false' "$src"
+    grep -q 'FileHandle.nullDevice' "$src"
+    grep -q 'localRunning' "$src"
+}

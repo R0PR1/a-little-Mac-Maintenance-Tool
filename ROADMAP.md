@@ -57,7 +57,7 @@
 
 - Zsh completion polish
 - README screenshots/examples
-- Homebrew formula finalization (checksum after first tag)
+- Homebrew tap (`Formula/mm.rb`; checksum after first tag)
 - release checksum workflow
 - CI on Ubuntu (mocked) and macOS runners
 - macOS menu extra

@@ -320,7 +320,7 @@ v0.1.0
 
 Release should produce source archive and SHA256 checksum.
 
-Keep a Homebrew formula template in `packaging/homebrew/mm.rb`.
+Keep the Homebrew tap formula in `Formula/mm.rb` (copy in `packaging/homebrew/mm.rb`). Head-only until a tag on `main`; then fill `url` / `sha256` from GitHub’s `refs/tags/vX.Y.Z.tar.gz`.
 
 Do not hardcode a GitHub owner in core runtime logic. Packaging placeholders are acceptable until the repository owner is chosen.
 

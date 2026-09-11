@@ -17,6 +17,8 @@ make install          # payload in ~/.local/share/mm, launcher in ~/.local/bin
 make link             # launcher pointing at this checkout
 ```
 
+Homebrew tap of this repo: see [docs/homebrew.md](docs/homebrew.md).
+
 ## Rules of the road
 
 - Keep `bin/mm` as a router. Put logic in `lib/mm/*.sh`.

@@ -69,6 +69,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var refreshTimer: Timer?
     private var pulseTimer: Timer?
     private var pulseOn = true
+    private var inflight: [Process] = []
+    private var localRunning: Running?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -93,19 +95,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         rebuildMenu(menu)
     }
 
-    private func mmBin() -> String {
+    private func extraPath() -> String {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".local/bin").path
+        let extras = [
+            home,
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin",
+            "/bin",
+            "/usr/sbin",
+            "/sbin",
+        ]
+        let existing = ProcessInfo.processInfo.environment["PATH"] ?? ""
+        return (extras + existing.split(separator: ":").map(String.init)).joined(separator: ":")
+    }
+
+    private func processEnvironment() -> [String: String] {
+        var env = ProcessInfo.processInfo.environment
+        env["PATH"] = extraPath()
+        if let bin = mmBin() {
+            env["MM_BIN"] = bin
+        }
+        return env
+    }
+
+    private func mmBin() -> String? {
         if let env = ProcessInfo.processInfo.environment["MM_BIN"], FileManager.default.isExecutableFile(atPath: env) {
             return env
         }
         let home = NSHomeDirectory()
-        for path in [
+        var candidates = [
             "\(home)/.local/bin/mm",
             "/opt/homebrew/bin/mm",
             "/usr/local/bin/mm",
-        ] where FileManager.default.isExecutableFile(atPath: path) {
+        ]
+        let path = extraPath()
+        for dir in path.split(separator: ":") {
+            candidates.append("\(dir)/mm")
+        }
+        var seen = Set<String>()
+        for path in candidates where seen.insert(path).inserted && FileManager.default.isExecutableFile(atPath: path) {
             return path
         }
-        return "mm"
+        return nil
     }
 
     private func cacheURL() -> URL {
@@ -134,7 +167,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func runningOverlay() -> Running? {
-        snapshot?.running
+        localRunning ?? snapshot?.running
     }
 
     private func pipColor() -> NSColor {
@@ -257,24 +290,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return "Last check \(delta / 86400)d ago"
     }
 
-    private func runMm(_ args: [String], completion: ((Data?, Int32) -> Void)? = nil) {
+    private func logError(_ message: String) {
+        FileHandle.standardError.write(Data("mm-extra: \(message)\n".utf8))
+    }
+
+    private func runMm(_ args: [String], captureOutput: Bool = true, completion: ((Data?, Int32) -> Void)? = nil) {
+        guard let bin = mmBin() else {
+            logError("mm executable not found (set MM_BIN); tried ~/.local/bin, Homebrew, PATH")
+            DispatchQueue.main.async { completion?(nil, 2) }
+            return
+        }
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: mmBin())
+        process.executableURL = URL(fileURLWithPath: bin)
         process.arguments = args
+        process.environment = processEnvironment()
         let out = Pipe()
-        let err = Pipe()
-        process.standardOutput = out
-        process.standardError = err
-        process.terminationHandler = { proc in
-            let data = out.fileHandleForReading.readDataToEndOfFile()
+        if captureOutput {
+            process.standardOutput = out
+        } else {
+            process.standardOutput = FileHandle.nullDevice
+        }
+        process.standardError = FileHandle.nullDevice
+        process.terminationHandler = { [weak self] proc in
+            let data = captureOutput ? out.fileHandleForReading.readDataToEndOfFile() : nil
             DispatchQueue.main.async {
+                self?.inflight.removeAll { $0 === proc }
                 completion?(data, proc.terminationStatus)
             }
         }
+        inflight.append(process)
         do {
             try process.run()
         } catch {
-            completion?(nil, 2)
+            inflight.removeAll { $0 === process }
+            logError("failed to spawn \(bin) \(args.joined(separator: " ")): \(error)")
+            DispatchQueue.main.async { completion?(nil, 2) }
         }
     }
 
@@ -291,17 +341,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openDashboard() {
-        runInTerminal("\(mmBin()) status")
+        guard let bin = mmBin() else {
+            logError("mm executable not found")
+            return
+        }
+        runInTerminal("\(bin) status")
     }
 
     @objc private func runCheck() {
-        runMm(["update"]) { [weak self] _, _ in
+        if runningOverlay() != nil { return }
+        localRunning = Running(job: "update", pid: Int(ProcessInfo.processInfo.processIdentifier), startedAt: Int(Date().timeIntervalSince1970))
+        renderTitle()
+        // brew update is verbose. Capturing stdout/stderr in pipes deadlocks once the
+        // kernel pipe buffer fills, so Run check now never returned on a real Mac.
+        runMm(["update"], captureOutput: false) { [weak self] _, _ in
+            self?.localRunning = nil
             self?.refresh(force: true)
         }
     }
 
     @objc private func openUpgrade() {
-        runInTerminal("\(mmBin()) upgrade")
+        guard let bin = mmBin() else {
+            logError("mm executable not found")
+            return
+        }
+        runInTerminal("\(bin) upgrade")
     }
 
     @objc private func openLogs() {

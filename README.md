@@ -40,6 +40,22 @@ Most “Mac maintenance” tools either do too much, or they hide mutations behi
 
 ## Install
 
+### Homebrew tap
+
+This repo is the tap (not `homebrew/core`). See [docs/homebrew.md](docs/homebrew.md).
+
+```bash
+brew tap r0pr1/mm https://github.com/R0PR1/a-little-Mac-Maintenance-Tool
+brew install r0pr1/mm/mm
+```
+
+The formula is **head-only** until a `v0.1.0` tag exists, so this builds from `main`. Then:
+
+```bash
+mm schedule enable daily
+mm menubar enable
+```
+
 ### From a checkout
 
 ```bash
@@ -64,15 +80,7 @@ fpath+=("$(pwd)/completions")
 autoload -U compinit && compinit
 ```
 
-### Homebrew formula template
-
-A formula stub is in [`packaging/homebrew/mm.rb`](packaging/homebrew/mm.rb). Point `url` / `sha256` at a tagged release, then:
-
-```bash
-brew install --build-from-source packaging/homebrew/mm.rb
-```
-
-Uninstall a source install with `make uninstall`. Configuration (`~/.config/mm/`) and logs (`~/Library/Logs/mm/`) are preserved.
+Uninstall a source install with `make uninstall`. Configuration (`~/.config/mm/`) and logs (`~/Library/Logs/mm/`) are preserved. A local formula file is at [`Formula/mm.rb`](Formula/mm.rb) (`brew install --HEAD --build-from-source Formula/mm.rb`).
 
 ---
 
@@ -205,7 +213,11 @@ mm menubar status
 mm menubar disable
 ```
 
-Requires **Xcode Command Line Tools** (`swiftc`). Click the extra for disk, battery, Time Machine, Homebrew, then Open Dashboard / Run check now / Upgrade formulae (only when outdated).
+Requires **Xcode Command Line Tools** (`swiftc`). Click the extra for disk, battery, Time Machine, Homebrew, then Open Dashboard / Run check now / Upgrade formulae (only when outdated). **Run check now** runs `mm update` (Homebrew metadata only). After `git pull` or `brew upgrade mm`, rebuild the extra so the new binary is what the menu bar loads:
+
+```bash
+mm menubar disable && mm menubar enable
+```
 
 ---
 

@@ -63,7 +63,9 @@ mm menubar enable
 mm menubar disable
 ```
 
-macOS only. `enable` builds `macos/MmExtra.swift` with `swiftc` (Xcode CLT), installs `~/Library/LaunchAgents/io.mm.menubar.plist`, and keeps the extra alive next to the clock. The extra polls `mm status --json`. Upgrade from the menu is explicit (opens Terminal). `Quit mm extra` bootstraps out the agent so KeepAlive does not restart it.
+macOS only. `enable` builds `macos/MmExtra.swift` with `swiftc` (Xcode CLT), installs `~/Library/LaunchAgents/io.mm.menubar.plist` (with `MM_BIN` and a PATH that includes Homebrew), and keeps the extra alive next to the clock. The extra polls `mm status --json`. **Run check now** runs `mm update` without capturing `brew update` stdout (a full pipe buffer used to hang the extra). Upgrade from the menu is explicit (opens Terminal). `Quit mm extra` bootstraps out the agent so KeepAlive does not restart it.
+
+After upgrading mm, rebuild: `mm menubar disable && mm menubar enable`.
 
 ## `mm self-update`
 
