@@ -8,7 +8,7 @@ struct Snapshot: Decodable {
     var checkedAt: Int
     var running: Running?
     var host: Host
-    var disk: Item?
+    var disk: Disk?
     var battery: Battery?
     var timeMachine: Item?
     var homebrew: Homebrew?
@@ -43,6 +43,20 @@ struct Item: Decodable {
     var detail: String
 }
 
+struct Disk: Decodable {
+    var state: String
+    var percent: Int?
+    var free: String?
+    var detail: String?
+
+    var menuDetail: String {
+        if let detail, !detail.isEmpty { return detail }
+        if let percent, let free, !free.isEmpty { return "\(percent)% · \(free) free" }
+        if let percent { return "\(percent)%" }
+        return "—"
+    }
+}
+
 struct Battery: Decodable {
     var state: String
     var percent: Int?
@@ -71,6 +85,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var pulseOn = true
     private var inflight: [Process] = []
     private var localRunning: Running?
+    private var statusInFlight = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -152,16 +167,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func refresh(force: Bool) {
-        if !force, let cached = loadCached() {
+        // Always paint from cache first. force:true used to skip this, so a hung
+        // status --json left the menu on "waiting for first check" forever.
+        if let cached = loadCached() {
             snapshot = cached
             renderTitle()
+        } else if force {
+            renderTitle()
         }
-        runMm(["status", "--json"]) { [weak self] data, _ in
-            if let data, let snap = try? JSONDecoder().decode(Snapshot.self, from: data) {
-                self?.snapshot = snap
-            } else if force {
-                self?.snapshot = self?.loadCached()
-            }
+        if statusInFlight { return }
+        statusInFlight = true
+        // Discard stdout. mm status --json tees JSON into a pipe; reading only in
+        // terminationHandler deadlocks once the pipe buffer fills (same class of
+        // bug as Run check now / brew update). The snapshot is already on disk.
+        runMm(["status", "--json"], captureOutput: false) { [weak self] _, _ in
+            self?.statusInFlight = false
+            self?.snapshot = self?.loadCached() ?? self?.snapshot
             self?.renderTitle()
         }
     }
@@ -233,7 +254,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
-        addRow(menu, "Disk", snap?.disk?.detail ?? "—")
+        addRow(menu, "Disk", snap?.disk?.menuDetail ?? "—")
         if let battery = snap?.battery {
             addRow(menu, "Battery", battery.detail)
         }

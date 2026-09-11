@@ -14,6 +14,7 @@ setup() {
     [[ "$output" == *'"overall":"healthy"'* ]]
     [[ "$output" == *'"formulae_outdated":0'* ]]
     [[ "$output" == *'"percent":54'* ]]
+    [[ "$output" == *'"detail":"54% · 421Gi free"'* ]]
 }
 
 @test "mm --json is an alias for status --json" {

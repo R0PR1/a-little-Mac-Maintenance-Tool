@@ -84,3 +84,18 @@ setup() {
     grep -q 'FileHandle.nullDevice' "$src"
     grep -q 'localRunning' "$src"
 }
+
+@test "menu extra refreshes status from cache without capturing stdout" {
+    src="$BATS_TEST_DIRNAME/../macos/MmExtra.swift"
+    grep -q 'captureOutput: false' "$src"
+    grep -q 'statusInFlight' "$src"
+    grep -q 'if let cached = loadCached()' "$src"
+    grep -q 'struct Disk: Decodable' "$src"
+    grep -q 'menuDetail' "$src"
+}
+
+@test "status --json writes cache before printing" {
+    src="$BATS_TEST_DIRNAME/../lib/mm/json.sh"
+    grep -q 'printf .*%s.* > "$MM_STATUS_CACHE"' "$src"
+    ! grep -q '| tee "$MM_STATUS_CACHE"' "$src"
+}

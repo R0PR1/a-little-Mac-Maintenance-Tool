@@ -52,10 +52,11 @@ mm_json_disk() {
     value="${found#*$'\t'}"
     pct="$(printf '%s' "$value" | grep -Eo '^[0-9]+' || true)"
     free="$(printf '%s' "$value" | sed -n 's/^[0-9]*% · \(.*\) free$/\1/p')"
-    printf '{"state":%s,"percent":%s,"free":%s}' \
+    printf '{"state":%s,"percent":%s,"free":%s,"detail":%s}' \
         "$(mm_json_str "$state")" \
         "${pct:-null}" \
-        "$(mm_json_str "${free}")"
+        "$(mm_json_str "${free}")" \
+        "$(mm_json_str "$value")"
 }
 
 mm_json_battery() {
@@ -145,6 +146,9 @@ mm_status_json() {
 EOF
 )"
     mkdir -p "$MM_CACHE_DIR"
-    printf '%s\n' "$payload" | tee "$MM_STATUS_CACHE"
+    # Write the cache before printing. A consumer that captures stdout in a pipe
+    # and only drains after exit (Swift Process) can deadlock on tee(1).
+    printf '%s\n' "$payload" > "$MM_STATUS_CACHE"
+    printf '%s\n' "$payload"
     return "$MM_EXIT_STATE"
 }
