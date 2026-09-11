@@ -94,6 +94,14 @@ setup() {
     grep -q 'menuDetail' "$src"
 }
 
+@test "menu extra shows Needs attention issues from snapshot" {
+    src="$BATS_TEST_DIRNAME/../macos/MmExtra.swift"
+    grep -q 'Needs attention' "$src"
+    grep -q 'menuLine' "$src"
+    grep -q 'struct Issue' "$src"
+    grep -q 'casksOutdated' "$src"
+}
+
 @test "status --json writes cache before printing" {
     src="$BATS_TEST_DIRNAME/../lib/mm/json.sh"
     grep -q 'printf .*%s.* > "$MM_STATUS_CACHE"' "$src"
