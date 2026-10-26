@@ -122,6 +122,8 @@ setup() {
     grep -q 'MmSettingsController' "$src"
     grep -q 'MmConsoleController' "$src"
     grep -q 'WKWebView' "$src"
+    grep -q 'isReleasedWhenClosed = false' "$src"
+    grep -q 'orderFrontRegardless' "$src"
 }
 
 @test "menubar plist sets MM_ROOT for docs" {

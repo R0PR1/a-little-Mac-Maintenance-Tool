@@ -21,9 +21,17 @@ enum MmWindows {
     static var settingsController: MmSettingsController?
 
     static func present(_ window: NSWindow) {
+        // LSUIElement extras stay accessory; force key status so a reopened
+        // window is visible after the user closed it once.
+        if window.isReleasedWhenClosed {
+            window.isReleasedWhenClosed = false
+        }
+        if !window.isVisible {
+            window.center()
+        }
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
-        window.center()
+        window.orderFrontRegardless()
     }
 }
 
@@ -42,6 +50,7 @@ final class MmGuideController: NSObject, WKNavigationDelegate {
         )
         super.init()
         window.title = "How mm works"
+        window.isReleasedWhenClosed = false
         window.minSize = NSSize(width: 480, height: 360)
         web.navigationDelegate = self
         web.setValue(false, forKey: "drawsBackground")
@@ -70,6 +79,7 @@ final class MmDashboardController: NSObject {
         )
         super.init()
         window.title = "mm dashboard"
+        window.isReleasedWhenClosed = false
         window.minSize = NSSize(width: 420, height: 320)
 
         let root = NSView(frame: .zero)
@@ -227,6 +237,7 @@ final class MmConsoleController: NSObject {
         )
         super.init()
         window.title = "mm"
+        window.isReleasedWhenClosed = false
         window.minSize = NSSize(width: 420, height: 240)
 
         let root = NSView(frame: .zero)
