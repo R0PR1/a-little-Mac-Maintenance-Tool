@@ -105,12 +105,23 @@ setup() {
 @test "menu extra has Parameters and How mm works" {
     src="$BATS_TEST_DIRNAME/../macos/MmExtra.swift"
     grep -q 'Parameters' "$src"
-    grep -q 'toggleDaily' "$src"
-    grep -q 'toggleWeekly' "$src"
-    grep -q 'Allow weekly upgrades' "$src"
+    grep -q 'openSettings' "$src"
     grep -q 'How mm works' "$src"
     grep -q 'openGuide' "$src"
     grep -q 'MM_ROOT' "$src"
+    grep -q 'MmWindows' "$src"
+    grep -q 'runJobInConsole' "$src"
+    ! grep -q 'runInTerminal' "$src"
+}
+
+@test "native windows module provides guide dashboard settings console" {
+    src="$BATS_TEST_DIRNAME/../macos/MmWindows.swift"
+    [[ -f "$src" ]]
+    grep -q 'MmGuideController' "$src"
+    grep -q 'MmDashboardController' "$src"
+    grep -q 'MmSettingsController' "$src"
+    grep -q 'MmConsoleController' "$src"
+    grep -q 'WKWebView' "$src"
 }
 
 @test "menubar plist sets MM_ROOT for docs" {

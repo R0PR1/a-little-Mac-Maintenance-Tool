@@ -216,8 +216,8 @@ mm menubar disable
 Requires **Xcode Command Line Tools** (`swiftc`). Click the extra for:
 
 - **Needs attention** — amber lines for each problem (Time Machine, FileVault, outdated formulae/casks, …)
-- **Parameters** — enable/disable launchd daily & weekly jobs, and the weekly-upgrade / casks opt-ins (not cron)
-- **How mm works** — opens the bundled [user guide](docs/user-guide.md)
+- **Parameters…** — native window for launchd daily/weekly jobs and upgrade opt-ins (not cron)
+- **How mm works** — in-app guide (no browser); dashboard and upgrades also stay inside mm
 
 **Run check now** runs `mm update` (Homebrew metadata only). After `git pull` or `brew upgrade mm`, rebuild the extra:
 

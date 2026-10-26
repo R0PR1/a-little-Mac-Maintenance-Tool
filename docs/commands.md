@@ -68,10 +68,11 @@ macOS only. `enable` builds `macos/MmExtra.swift` with `swiftc` (Xcode CLT), ins
 Menu highlights:
 
 - **Needs attention** — amber, clickable lines from `issues[]`
-- **Parameters** — toggles `mm schedule enable|disable daily|weekly` and `weekly_upgrade` / `upgrade_casks` via config
-- **How mm works** — opens `docs/user-guide.html` from the install tree (`MM_ROOT`)
+- **Parameters…** — native window toggling `mm schedule enable|disable daily|weekly` and `weekly_upgrade` / `upgrade_casks`
+- **How mm works** — in-app WebKit window loading `docs/user-guide.html` (`MM_ROOT`)
+- **Open Dashboard** / **Upgrade…** / **Run check now** — native windows (no Terminal)
 
-**Run check now** runs `mm update` without capturing brew stdout. Upgrade from the menu is explicit (opens Terminal). `Quit mm extra` bootouts the agent so KeepAlive does not restart it.
+`Quit mm extra` bootouts the agent so KeepAlive does not restart it.
 
 After upgrading mm, rebuild: `mm menubar disable && mm menubar enable`. See also [user-guide.md](user-guide.md).
 

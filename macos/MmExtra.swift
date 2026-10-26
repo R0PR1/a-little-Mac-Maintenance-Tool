@@ -279,9 +279,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if statusInFlight { return }
         statusInFlight = true
         runMm(["status", "--json"], captureOutput: false) { [weak self] _, _ in
-            self?.statusInFlight = false
-            self?.snapshot = self?.loadCached() ?? self?.snapshot
-            self?.renderTitle()
+            guard let self else { return }
+            self.statusInFlight = false
+            self.snapshot = self.loadCached() ?? self.snapshot
+            self.renderTitle()
+            MmWindows.dashboardController?.render(snapshot: self.snapshot)
+            MmWindows.settingsController?.render(settings: self.snapshot?.settings)
         }
     }
 
@@ -404,67 +407,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             caskUpgrade.isEnabled = !busy
         }
 
-        menu.addItem(parametersMenu(busy: busy))
+        let params = addAction(menu, "Parameters…", #selector(openSettings))
+        params.isEnabled = !busy
         addAction(menu, "How mm works", #selector(openGuide))
         addAction(menu, "Open logs", #selector(openLogs))
         menu.addItem(.separator())
         addAction(menu, "Quit mm extra", #selector(quitExtra))
-    }
-
-    private func parametersMenu(busy: Bool) -> NSMenuItem {
-        let parent = NSMenuItem(title: "Parameters", action: nil, keyEquivalent: "")
-        let submenu = NSMenu(title: "Parameters")
-        let settings = snapshot?.settings
-
-        let daily = NSMenuItem(
-            title: settings?.dailyLabel ?? "Daily check",
-            action: #selector(toggleDaily),
-            keyEquivalent: ""
-        )
-        daily.target = self
-        daily.state = (settings?.dailyEnabled == true) ? .on : .off
-        daily.isEnabled = !busy
-        submenu.addItem(daily)
-
-        let weekly = NSMenuItem(
-            title: settings?.weeklyLabel ?? "Weekly job",
-            action: #selector(toggleWeekly),
-            keyEquivalent: ""
-        )
-        weekly.target = self
-        weekly.state = (settings?.weeklyEnabled == true) ? .on : .off
-        weekly.isEnabled = !busy
-        submenu.addItem(weekly)
-
-        submenu.addItem(.separator())
-
-        let upgrades = NSMenuItem(
-            title: "Allow weekly upgrades",
-            action: #selector(toggleWeeklyUpgrade),
-            keyEquivalent: ""
-        )
-        upgrades.target = self
-        upgrades.state = (settings?.weeklyUpgrade == true) ? .on : .off
-        upgrades.isEnabled = !busy
-        submenu.addItem(upgrades)
-
-        let casks = NSMenuItem(
-            title: "Upgrade casks with mm upgrade",
-            action: #selector(toggleUpgradeCasks),
-            keyEquivalent: ""
-        )
-        casks.target = self
-        casks.state = (settings?.upgradeCasks == true) ? .on : .off
-        casks.isEnabled = !busy
-        submenu.addItem(casks)
-
-        submenu.addItem(.separator())
-        let note = NSMenuItem(title: "Uses launchd (not cron)", action: nil, keyEquivalent: "")
-        note.isEnabled = false
-        submenu.addItem(note)
-
-        parent.submenu = submenu
-        return parent
     }
 
     private func addStatusHeader(_ menu: NSMenu, _ overall: String) {
@@ -606,93 +554,140 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func runInTerminal(_ command: String) {
-        let script = "tell application \"Terminal\" to do script \(self.appleScriptQuote(command))"
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = ["-e", script]
-        try? process.run()
+    private func ensureDashboard() -> MmDashboardController {
+        if let existing = MmWindows.dashboardController {
+            return existing
+        }
+        let controller = MmDashboardController()
+        controller.onRefresh = { [weak self] in
+            self?.refresh(force: true)
+        }
+        MmWindows.dashboardController = controller
+        MmWindows.dashboard = controller.window
+        return controller
     }
 
-    private func appleScriptQuote(_ value: String) -> String {
-        "\"" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
+    private func ensureConsole() -> MmConsoleController {
+        if let existing = MmWindows.consoleController {
+            return existing
+        }
+        let controller = MmConsoleController()
+        controller.onFinished = { [weak self] in
+            self?.localRunning = nil
+            self?.mutating = false
+            self?.refresh(force: true)
+        }
+        MmWindows.consoleController = controller
+        MmWindows.console = controller.window
+        return controller
     }
 
-    @objc private func openDashboard() {
+    private func ensureSettings() -> MmSettingsController {
+        if let existing = MmWindows.settingsController {
+            return existing
+        }
+        let controller = MmSettingsController()
+        controller.onToggleDaily = { [weak self] enabled in
+            self?.mutate(["schedule", enabled ? "enable" : "disable", "daily"])
+        }
+        controller.onToggleWeekly = { [weak self] enabled in
+            self?.mutate(["schedule", enabled ? "enable" : "disable", "weekly"])
+        }
+        controller.onToggleWeeklyUpgrade = { [weak self] enabled in
+            self?.mutate(["config", "set", "weekly_upgrade", enabled ? "true" : "false"])
+        }
+        controller.onToggleUpgradeCasks = { [weak self] enabled in
+            self?.mutate(["config", "set", "upgrade_casks", enabled ? "true" : "false"])
+        }
+        MmWindows.settingsController = controller
+        MmWindows.settings = controller.window
+        return controller
+    }
+
+    private func runJobInConsole(title: String, args: [String], asRunning job: String?) {
         guard let bin = mmBin() else {
             logError("mm executable not found")
             return
         }
-        runInTerminal("\(bin) status")
+        if let job {
+            localRunning = Running(job: job, pid: Int(ProcessInfo.processInfo.processIdentifier), startedAt: Int(Date().timeIntervalSince1970))
+            renderTitle()
+        } else {
+            mutating = true
+        }
+        let console = ensureConsole()
+        MmWindows.present(console.window)
+        console.run(title: title, executable: bin, arguments: args, environment: processEnvironment())
+    }
+
+    @objc private func openDashboard() {
+        let dash = ensureDashboard()
+        dash.render(snapshot: snapshot)
+        MmWindows.present(dash.window)
+        refresh(force: true)
     }
 
     @objc private func runCheck() {
         if runningOverlay() != nil || mutating { return }
-        localRunning = Running(job: "update", pid: Int(ProcessInfo.processInfo.processIdentifier), startedAt: Int(Date().timeIntervalSince1970))
-        renderTitle()
-        runMm(["update"], captureOutput: false) { [weak self] _, _ in
-            self?.localRunning = nil
-            self?.refresh(force: true)
-        }
+        runJobInConsole(title: "mm update", args: ["update"], asRunning: "update")
     }
 
     @objc private func openUpgrade() {
-        guard let bin = mmBin() else {
-            logError("mm executable not found")
-            return
-        }
-        runInTerminal("\(bin) upgrade")
+        if runningOverlay() != nil || mutating { return }
+        runJobInConsole(title: "mm upgrade", args: ["upgrade"], asRunning: "upgrade")
     }
 
     @objc private func openUpgradeCasks() {
-        guard let bin = mmBin() else {
-            logError("mm executable not found")
-            return
-        }
-        runInTerminal("\(bin) upgrade --casks")
+        if runningOverlay() != nil || mutating { return }
+        runJobInConsole(title: "mm upgrade --casks", args: ["upgrade", "--casks"], asRunning: "upgrade")
     }
 
-    @objc private func toggleDaily() {
-        let enabled = snapshot?.settings?.dailyEnabled == true
-        mutate(["schedule", enabled ? "disable" : "enable", "daily"])
-    }
-
-    @objc private func toggleWeekly() {
-        let enabled = snapshot?.settings?.weeklyEnabled == true
-        mutate(["schedule", enabled ? "disable" : "enable", "weekly"])
-    }
-
-    @objc private func toggleWeeklyUpgrade() {
-        let enabled = snapshot?.settings?.weeklyUpgrade == true
-        mutate(["config", "set", "weekly_upgrade", enabled ? "false" : "true"])
-    }
-
-    @objc private func toggleUpgradeCasks() {
-        let enabled = snapshot?.settings?.upgradeCasks == true
-        mutate(["config", "set", "upgrade_casks", enabled ? "false" : "true"])
+    @objc private func openSettings() {
+        let settings = ensureSettings()
+        settings.render(settings: snapshot?.settings)
+        MmWindows.present(settings.window)
     }
 
     @objc private func openGuide() {
-        if let root = mmRoot() {
-            let html = root + "/docs/user-guide.html"
-            if FileManager.default.fileExists(atPath: html) {
-                NSWorkspace.shared.open(URL(fileURLWithPath: html))
-                return
-            }
-            let md = root + "/docs/user-guide.md"
-            if FileManager.default.fileExists(atPath: md) {
-                NSWorkspace.shared.open(URL(fileURLWithPath: md))
-                return
-            }
+        if let existing = MmWindows.guide {
+            MmWindows.present(existing)
+            return
         }
-        if let url = URL(string: "https://github.com/R0PR1/a-little-Mac-Maintenance-Tool/blob/main/docs/user-guide.md") {
-            NSWorkspace.shared.open(url)
+        guard let root = mmRoot() else {
+            logError("MM_ROOT missing; cannot open guide")
+            return
         }
+        let html = root + "/docs/user-guide.html"
+        guard FileManager.default.fileExists(atPath: html) else {
+            logError("missing \(html)")
+            return
+        }
+        let controller = MmGuideController(htmlURL: URL(fileURLWithPath: html))
+        MmWindows.guide = controller.window
+        // Retain controller via associated window delegate lifetime: keep strong ref on AppDelegate.
+        guideController = controller
+        MmWindows.present(controller.window)
     }
 
+    private var guideController: MmGuideController?
+
     @objc private func openLogs() {
-        let logs = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/mm")
-        NSWorkspace.shared.open(logs)
+        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/mm")
+        var combined = ""
+        for name in ["daily.log", "weekly.log", "menubar.error.log"] {
+            let url = dir.appendingPathComponent(name)
+            if let data = try? String(contentsOf: url, encoding: .utf8), !data.isEmpty {
+                combined += "—— \(name) ——\n"
+                let lines = data.split(separator: "\n", omittingEmptySubsequences: false)
+                combined += lines.suffix(100).joined(separator: "\n") + "\n\n"
+            }
+        }
+        if combined.isEmpty {
+            combined = "No log lines yet.\nFolder: \(dir.path)\n"
+        }
+        let console = ensureConsole()
+        console.showText(title: "mm logs", body: combined)
+        MmWindows.present(console.window)
     }
 
     @objc private func quitExtra() {

@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- Menu UX: amber **Needs attention** lines (clickable), automation summary, Parameters submenu (launchd daily/weekly + weekly upgrade / casks opt-ins)
-- **How mm works** opens the bundled user guide (`docs/user-guide.html`)
+- Menu UX: amber **Needs attention** lines, automation summary, native windows for dashboard / docs / parameters / job output (no Terminal or browser)
+- **How mm works** opens the bundled guide in an in-app WebKit window
 - Status JSON includes a `settings` block for the menu extra
 - Follow symlinks and install a real launcher so `~/.local/bin/mm` finds `lib/mm`
 - `make install`, `make uninstall`, `make reinstall`, and `make link` with `PREFIX`

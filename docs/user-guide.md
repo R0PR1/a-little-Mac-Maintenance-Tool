@@ -17,11 +17,11 @@ Click the `mm` item for details. Amber is not a crash: it lists each reason unde
 
 | Action | Effect |
 | --- | --- |
-| **Open Dashboard** | Runs `mm status` in Terminal (full report) |
-| **Run check now** | Runs `mm update` — refreshes Homebrew metadata only, never upgrades |
-| **Upgrade formulae…** | Runs `mm upgrade` in Terminal (explicit) |
-| **Parameters** | Enable or disable launchd automation (not cron) |
-| **How mm works** | Opens this guide |
+| **Open Dashboard** | Native window with the latest health snapshot |
+| **Run check now** | Runs `mm update` in a native console — metadata only, never upgrades |
+| **Upgrade formulae…** | Runs `mm upgrade` in a native console (explicit) |
+| **Parameters…** | Native window to enable/disable launchd automation (not cron) |
+| **How mm works** | This guide, inside mm (no browser) |
 
 ## Automation (launchd, not cron)
 
