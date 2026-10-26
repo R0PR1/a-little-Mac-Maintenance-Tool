@@ -41,7 +41,7 @@ EOF
 
 mm_copy_payload() {
     local dest="$1"
-    mkdir -p "$dest/bin" "$dest/lib/mm" "$dest/launchd" "$dest/completions" "$dest/macos" "$dest/scripts"
+    mkdir -p "$dest/bin" "$dest/lib/mm" "$dest/launchd" "$dest/completions" "$dest/macos" "$dest/scripts" "$dest/docs"
     cp "$ROOT_DIR/bin/mm" "$dest/bin/mm"
     cp "$ROOT_DIR/lib/mm/"*.sh "$dest/lib/mm/"
     cp "$ROOT_DIR/launchd/"*.template "$dest/launchd/"
@@ -49,6 +49,8 @@ mm_copy_payload() {
     cp "$ROOT_DIR/scripts/build-menubar.sh" "$dest/scripts/build-menubar.sh"
     cp "$ROOT_DIR/VERSION" "$dest/VERSION"
     cp "$ROOT_DIR/completions/_mm" "$dest/completions/_mm"
+    cp "$ROOT_DIR/docs/user-guide.md" "$dest/docs/user-guide.md"
+    cp "$ROOT_DIR/docs/user-guide.html" "$dest/docs/user-guide.html"
     chmod 755 "$dest/bin/mm" "$dest/scripts/build-menubar.sh"
 }
 

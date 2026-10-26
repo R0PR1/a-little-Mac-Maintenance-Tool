@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Menu UX: amber **Needs attention** lines (clickable), automation summary, Parameters submenu (launchd daily/weekly + weekly upgrade / casks opt-ins)
+- **How mm works** opens the bundled user guide (`docs/user-guide.html`)
+- Status JSON includes a `settings` block for the menu extra
 - Follow symlinks and install a real launcher so `~/.local/bin/mm` finds `lib/mm`
 - `make install`, `make uninstall`, `make reinstall`, and `make link` with `PREFIX`
 - `mm status --json` snapshot for the menu extra, plus a run lock while jobs execute

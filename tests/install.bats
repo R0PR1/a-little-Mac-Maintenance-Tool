@@ -32,6 +32,8 @@ setup() {
     [[ -f "$MM_INSTALL_DIR/lib/mm/output.sh" ]]
     [[ -f "$MM_INSTALL_DIR/macos/MmExtra.swift" ]]
     [[ -x "$MM_INSTALL_DIR/scripts/build-menubar.sh" ]]
+    [[ -f "$MM_INSTALL_DIR/docs/user-guide.html" ]]
+    [[ -f "$MM_INSTALL_DIR/docs/user-guide.md" ]]
     [[ -x "$MM_BIN_DIR/mm" ]]
     [[ ! -L "$MM_BIN_DIR/mm" ]]
     run "$MM_BIN_DIR/mm" version

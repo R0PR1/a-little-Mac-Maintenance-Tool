@@ -20,7 +20,7 @@ class Mm < Formula
   end
 
   def install
-    libexec.install "bin", "lib", "launchd", "completions", "macos", "scripts", "VERSION"
+    libexec.install "bin", "lib", "launchd", "completions", "macos", "scripts", "docs", "VERSION"
     (bin/"mm").write <<~EOS
       #!/bin/bash
       exec "#{libexec}/bin/mm" "$@"

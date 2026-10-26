@@ -63,9 +63,17 @@ mm menubar enable
 mm menubar disable
 ```
 
-macOS only. `enable` builds `macos/MmExtra.swift` with `swiftc` (Xcode CLT), installs `~/Library/LaunchAgents/io.mm.menubar.plist` (with `MM_BIN` and a PATH that includes Homebrew), and keeps the extra alive next to the clock. The extra polls `mm status --json` but reads the snapshot from `~/Library/Caches/mm/last-status.json` (capturing stdout in a pipe deadlocked the extra on “waiting for first check”). **Run check now** runs `mm update` the same way. Upgrade from the menu is explicit (opens Terminal). `Quit mm extra` bootstraps out the agent so KeepAlive does not restart it.
+macOS only. `enable` builds `macos/MmExtra.swift` with `swiftc` (Xcode CLT), installs `~/Library/LaunchAgents/io.mm.menubar.plist` (with `MM_BIN`, `MM_ROOT`, and a PATH that includes Homebrew), and keeps the extra alive next to the clock. The extra polls `mm status --json` but reads the snapshot from `~/Library/Caches/mm/last-status.json`.
 
-After upgrading mm, rebuild: `mm menubar disable && mm menubar enable`.
+Menu highlights:
+
+- **Needs attention** — amber, clickable lines from `issues[]`
+- **Parameters** — toggles `mm schedule enable|disable daily|weekly` and `weekly_upgrade` / `upgrade_casks` via config
+- **How mm works** — opens `docs/user-guide.html` from the install tree (`MM_ROOT`)
+
+**Run check now** runs `mm update` without capturing brew stdout. Upgrade from the menu is explicit (opens Terminal). `Quit mm extra` bootouts the agent so KeepAlive does not restart it.
+
+After upgrading mm, rebuild: `mm menubar disable && mm menubar enable`. See also [user-guide.md](user-guide.md).
 
 ## `mm self-update`
 
