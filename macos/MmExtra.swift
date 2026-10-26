@@ -15,10 +15,11 @@ struct Snapshot: Decodable {
     var automation: Automation
     var filevault: Item?
     var issues: [Issue]
+    var settings: Settings?
     var hints: [String]
 
     enum CodingKeys: String, CodingKey {
-        case version, overall, exit, running, host, disk, battery, homebrew, automation, filevault, issues, hints
+        case version, overall, exit, running, host, disk, battery, homebrew, automation, filevault, issues, settings, hints
         case checkedAt = "checked_at"
         case timeMachine = "time_machine"
     }
@@ -38,6 +39,7 @@ struct Snapshot: Decodable {
         automation = try c.decode(Automation.self, forKey: .automation)
         filevault = try c.decodeIfPresent(Item.self, forKey: .filevault)
         issues = try c.decodeIfPresent([Issue].self, forKey: .issues) ?? []
+        settings = try c.decodeIfPresent(Settings.self, forKey: .settings)
         hints = try c.decodeIfPresent([String].self, forKey: .hints) ?? []
     }
 }
@@ -50,6 +52,40 @@ struct Issue: Decodable {
     var menuLine: String {
         if detail.isEmpty { return label }
         return "\(label) — \(detail)"
+    }
+}
+
+struct Settings: Decodable {
+    var dailyEnabled: Bool
+    var weeklyEnabled: Bool
+    var weeklyUpgrade: Bool
+    var upgradeCasks: Bool
+    var dailyHour: Int
+    var dailyMinute: Int
+    var weeklyDay: Int
+    var weeklyHour: Int
+    var weeklyMinute: Int
+
+    enum CodingKeys: String, CodingKey {
+        case dailyEnabled = "daily_enabled"
+        case weeklyEnabled = "weekly_enabled"
+        case weeklyUpgrade = "weekly_upgrade"
+        case upgradeCasks = "upgrade_casks"
+        case dailyHour = "daily_hour"
+        case dailyMinute = "daily_minute"
+        case weeklyDay = "weekly_day"
+        case weeklyHour = "weekly_hour"
+        case weeklyMinute = "weekly_minute"
+    }
+
+    var dailyLabel: String {
+        String(format: "Daily check (%02d:%02d)", dailyHour, dailyMinute)
+    }
+
+    var weeklyLabel: String {
+        let days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        let day = days[max(0, min(6, weeklyDay))]
+        return String(format: "Weekly job (%@ %02d:%02d)", day, weeklyHour, weeklyMinute)
     }
 }
 
@@ -126,6 +162,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var inflight: [Process] = []
     private var localRunning: Running?
     private var statusInFlight = false
+    private var mutating = false
+
+    private let sage = NSColor(calibratedRed: 0.51, green: 0.70, blue: 0.60, alpha: 1)
+    private let amber = NSColor(calibratedRed: 0.95, green: 0.80, blue: 0.56, alpha: 1)
+    private let actionRed = NSColor(calibratedRed: 0.88, green: 0.48, blue: 0.37, alpha: 1)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -172,6 +213,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let bin = mmBin() {
             env["MM_BIN"] = bin
         }
+        if let root = mmRoot() {
+            env["MM_ROOT"] = root
+        }
         return env
     }
 
@@ -196,6 +240,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return nil
     }
 
+    private func mmRoot() -> String? {
+        if let env = ProcessInfo.processInfo.environment["MM_ROOT"], FileManager.default.fileExists(atPath: env) {
+            return env
+        }
+        if let bin = mmBin() {
+            let share = (bin as NSString).deletingLastPathComponent
+                .appending("/../share/mm")
+            let resolved = (share as NSString).standardizingPath
+            if FileManager.default.fileExists(atPath: resolved) {
+                return resolved
+            }
+        }
+        let homeShare = NSHomeDirectory() + "/.local/share/mm"
+        if FileManager.default.fileExists(atPath: homeShare) {
+            return homeShare
+        }
+        return nil
+    }
+
     private func cacheURL() -> URL {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Caches/mm/last-status.json")
@@ -207,8 +270,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func refresh(force: Bool) {
-        // Always paint from cache first. force:true used to skip this, so a hung
-        // status --json left the menu on "waiting for first check" forever.
         if let cached = loadCached() {
             snapshot = cached
             renderTitle()
@@ -217,13 +278,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         if statusInFlight { return }
         statusInFlight = true
-        // Discard stdout. mm status --json tees JSON into a pipe; reading only in
-        // terminationHandler deadlocks once the pipe buffer fills (same class of
-        // bug as Run check now / brew update). The snapshot is already on disk.
         runMm(["status", "--json"], captureOutput: false) { [weak self] _, _ in
-            self?.statusInFlight = false
-            self?.snapshot = self?.loadCached() ?? self?.snapshot
-            self?.renderTitle()
+            guard let self else { return }
+            self.statusInFlight = false
+            self.snapshot = self.loadCached() ?? self.snapshot
+            self.renderTitle()
+            MmWindows.dashboardController?.render(snapshot: self.snapshot)
+            MmWindows.settingsController?.render(settings: self.snapshot?.settings)
         }
     }
 
@@ -233,17 +294,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func pipColor() -> NSColor {
         if runningOverlay() != nil {
-            return pulseOn ? NSColor(calibratedRed: 0.51, green: 0.70, blue: 0.60, alpha: 1) : NSColor.secondaryLabelColor
+            return pulseOn ? sage : NSColor.secondaryLabelColor
         }
         switch snapshot?.overall {
-        case "healthy":
-            return NSColor(calibratedRed: 0.51, green: 0.70, blue: 0.60, alpha: 1)
-        case "attention":
-            return NSColor(calibratedRed: 0.95, green: 0.80, blue: 0.56, alpha: 1)
-        case "action":
-            return NSColor(calibratedRed: 0.88, green: 0.48, blue: 0.37, alpha: 1)
-        default:
-            return NSColor.secondaryLabelColor
+        case "healthy": return sage
+        case "attention": return amber
+        case "action": return actionRed
+        default: return NSColor.secondaryLabelColor
         }
     }
 
@@ -285,13 +342,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.removeAllItems()
         let snap = snapshot
         let run = runningOverlay()
+        let busy = run != nil || mutating
 
         if let run {
             addHeader(menu, "mm · running \(run.job)")
             let elapsed = max(0, Int(Date().timeIntervalSince1970) - run.startedAt)
             addMuted(menu, "Started \(elapsed)s ago")
         } else if let snap {
-            addHeader(menu, "mm · \(snap.overall)")
+            addStatusHeader(menu, snap.overall)
             addMuted(menu, relativeTime(snap.checkedAt))
         } else {
             addHeader(menu, "mm · waiting for first check")
@@ -301,9 +359,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         let issues = snap?.issues ?? []
         if !issues.isEmpty {
-            addHeader(menu, "Needs attention")
+            addSectionLabel(menu, "Needs attention")
             for issue in issues {
-                addIssue(menu, issue.menuLine)
+                addIssue(menu, issue)
             }
             menu.addItem(.separator())
         }
@@ -326,37 +384,93 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
 
+        if let settings = snap?.settings {
+            menu.addItem(.separator())
+            addSectionLabel(menu, "Automation")
+            let dailyState = snap?.automation.daily?.state == "ok" ? "on" : "off"
+            let weeklyState = snap?.automation.weekly?.state == "ok" ? "on" : "off"
+            addMuted(menu, "  Daily  \(dailyState) · \(String(format: "%02d:%02d", settings.dailyHour, settings.dailyMinute))")
+            addMuted(menu, "  Weekly \(weeklyState) · upgrades \(settings.weeklyUpgrade ? "opt-in" : "off")")
+        }
+
         menu.addItem(.separator())
         addAction(menu, "Open Dashboard", #selector(openDashboard))
         let check = addAction(menu, "Run check now", #selector(runCheck))
-        if run != nil { check.isEnabled = false }
+        check.isEnabled = !busy
 
         let formulaeOutdated = snap?.homebrew?.formulaeOutdated ?? 0
         let casksOutdated = snap?.homebrew?.casksOutdated ?? 0
         let upgrade = addAction(menu, "Upgrade formulae…", #selector(openUpgrade))
-        upgrade.isEnabled = formulaeOutdated > 0 && run == nil
-        if casksOutdated > 0 && formulaeOutdated == 0 {
-            let caskHint = addMutedAction(menu, "Casks outdated — use: mm upgrade --casks")
-            caskHint.isEnabled = false
+        upgrade.isEnabled = formulaeOutdated > 0 && !busy
+        if casksOutdated > 0 {
+            let caskUpgrade = addAction(menu, "Upgrade casks…", #selector(openUpgradeCasks))
+            caskUpgrade.isEnabled = !busy
         }
 
+        let params = addAction(menu, "Parameters…", #selector(openSettings))
+        params.isEnabled = !busy
+        addAction(menu, "How mm works", #selector(openGuide))
         addAction(menu, "Open logs", #selector(openLogs))
         menu.addItem(.separator())
         addAction(menu, "Quit mm extra", #selector(quitExtra))
     }
 
-    private func addIssue(_ menu: NSMenu, _ title: String) {
-        let item = NSMenuItem(title: "!  \(title)", action: nil, keyEquivalent: "")
+    private func addStatusHeader(_ menu: NSMenu, _ overall: String) {
+        let color: NSColor
+        switch overall {
+        case "healthy": color = sage
+        case "attention": color = amber
+        case "action": color = actionRed
+        default: color = NSColor.labelColor
+        }
+        let text = NSMutableAttributedString(
+            string: "mm · ",
+            attributes: [
+                .font: NSFont.menuFont(ofSize: 0),
+                .foregroundColor: NSColor.labelColor,
+            ]
+        )
+        text.append(NSAttributedString(
+            string: overall,
+            attributes: [
+                .font: NSFont.menuFont(ofSize: 0),
+                .foregroundColor: color,
+            ]
+        ))
+        let item = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        item.attributedTitle = text
         item.isEnabled = false
         menu.addItem(item)
     }
 
-    @discardableResult
-    private func addMutedAction(_ menu: NSMenu, _ title: String) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
-        item.isEnabled = false
+    private func addSectionLabel(_ menu: NSMenu, _ title: String) {
+        let item = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        item.attributedTitle = NSAttributedString(
+            string: title,
+            attributes: [
+                .font: NSFont.boldSystemFont(ofSize: NSFont.systemFontSize),
+                .foregroundColor: NSColor.labelColor,
+            ]
+        )
+        // Keep enabled so attributed color is not replaced by the disabled grey.
+        item.isEnabled = true
+        item.action = nil
+        item.target = nil
         menu.addItem(item)
-        return item
+    }
+
+    private func addIssue(_ menu: NSMenu, _ issue: Issue) {
+        let color = issue.state == "error" ? actionRed : amber
+        let item = NSMenuItem(title: "", action: #selector(openDashboard), keyEquivalent: "")
+        item.target = self
+        item.attributedTitle = NSAttributedString(
+            string: "!  \(issue.menuLine)",
+            attributes: [
+                .font: NSFont.menuFont(ofSize: 0),
+                .foregroundColor: color,
+            ]
+        )
+        menu.addItem(item)
     }
 
     private func addHeader(_ menu: NSMenu, _ title: String) {
@@ -430,49 +544,150 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func runInTerminal(_ command: String) {
-        let script = "tell application \"Terminal\" to do script \(self.appleScriptQuote(command))"
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = ["-e", script]
-        try? process.run()
-    }
-
-    private func appleScriptQuote(_ value: String) -> String {
-        "\"" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
-    }
-
-    @objc private func openDashboard() {
-        guard let bin = mmBin() else {
-            logError("mm executable not found")
-            return
-        }
-        runInTerminal("\(bin) status")
-    }
-
-    @objc private func runCheck() {
-        if runningOverlay() != nil { return }
-        localRunning = Running(job: "update", pid: Int(ProcessInfo.processInfo.processIdentifier), startedAt: Int(Date().timeIntervalSince1970))
+    private func mutate(_ args: [String]) {
+        if mutating || runningOverlay() != nil { return }
+        mutating = true
         renderTitle()
-        // brew update is verbose. Capturing stdout/stderr in pipes deadlocks once the
-        // kernel pipe buffer fills, so Run check now never returned on a real Mac.
-        runMm(["update"], captureOutput: false) { [weak self] _, _ in
-            self?.localRunning = nil
+        runMm(args, captureOutput: false) { [weak self] _, _ in
+            self?.mutating = false
             self?.refresh(force: true)
         }
     }
 
-    @objc private func openUpgrade() {
+    private func ensureDashboard() -> MmDashboardController {
+        if let existing = MmWindows.dashboardController {
+            return existing
+        }
+        let controller = MmDashboardController()
+        controller.onRefresh = { [weak self] in
+            self?.refresh(force: true)
+        }
+        MmWindows.dashboardController = controller
+        MmWindows.dashboard = controller.window
+        return controller
+    }
+
+    private func ensureConsole() -> MmConsoleController {
+        if let existing = MmWindows.consoleController {
+            return existing
+        }
+        let controller = MmConsoleController()
+        controller.onFinished = { [weak self] in
+            self?.localRunning = nil
+            self?.mutating = false
+            self?.refresh(force: true)
+        }
+        MmWindows.consoleController = controller
+        MmWindows.console = controller.window
+        return controller
+    }
+
+    private func ensureSettings() -> MmSettingsController {
+        if let existing = MmWindows.settingsController {
+            return existing
+        }
+        let controller = MmSettingsController()
+        controller.onToggleDaily = { [weak self] enabled in
+            self?.mutate(["schedule", enabled ? "enable" : "disable", "daily"])
+        }
+        controller.onToggleWeekly = { [weak self] enabled in
+            self?.mutate(["schedule", enabled ? "enable" : "disable", "weekly"])
+        }
+        controller.onToggleWeeklyUpgrade = { [weak self] enabled in
+            self?.mutate(["config", "set", "weekly_upgrade", enabled ? "true" : "false"])
+        }
+        controller.onToggleUpgradeCasks = { [weak self] enabled in
+            self?.mutate(["config", "set", "upgrade_casks", enabled ? "true" : "false"])
+        }
+        MmWindows.settingsController = controller
+        MmWindows.settings = controller.window
+        return controller
+    }
+
+    private func runJobInConsole(title: String, args: [String], asRunning job: String?) {
         guard let bin = mmBin() else {
             logError("mm executable not found")
             return
         }
-        runInTerminal("\(bin) upgrade")
+        if let job {
+            localRunning = Running(job: job, pid: Int(ProcessInfo.processInfo.processIdentifier), startedAt: Int(Date().timeIntervalSince1970))
+            renderTitle()
+        } else {
+            mutating = true
+        }
+        let console = ensureConsole()
+        MmWindows.present(console.window)
+        console.run(title: title, executable: bin, arguments: args, environment: processEnvironment())
     }
 
+    @objc private func openDashboard() {
+        let dash = ensureDashboard()
+        dash.render(snapshot: snapshot)
+        MmWindows.present(dash.window)
+        refresh(force: true)
+    }
+
+    @objc private func runCheck() {
+        if runningOverlay() != nil || mutating { return }
+        runJobInConsole(title: "mm update", args: ["update"], asRunning: "update")
+    }
+
+    @objc private func openUpgrade() {
+        if runningOverlay() != nil || mutating { return }
+        runJobInConsole(title: "mm upgrade", args: ["upgrade"], asRunning: "upgrade")
+    }
+
+    @objc private func openUpgradeCasks() {
+        if runningOverlay() != nil || mutating { return }
+        runJobInConsole(title: "mm upgrade --casks", args: ["upgrade", "--casks"], asRunning: "upgrade")
+    }
+
+    @objc private func openSettings() {
+        let settings = ensureSettings()
+        settings.render(settings: snapshot?.settings)
+        MmWindows.present(settings.window)
+    }
+
+    @objc private func openGuide() {
+        if let existing = MmWindows.guide {
+            MmWindows.present(existing)
+            return
+        }
+        guard let root = mmRoot() else {
+            logError("MM_ROOT missing; cannot open guide")
+            return
+        }
+        let html = root + "/docs/user-guide.html"
+        guard FileManager.default.fileExists(atPath: html) else {
+            logError("missing \(html)")
+            return
+        }
+        let controller = MmGuideController(htmlURL: URL(fileURLWithPath: html))
+        MmWindows.guide = controller.window
+        // Retain controller via associated window delegate lifetime: keep strong ref on AppDelegate.
+        guideController = controller
+        MmWindows.present(controller.window)
+    }
+
+    private var guideController: MmGuideController?
+
     @objc private func openLogs() {
-        let logs = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/mm")
-        NSWorkspace.shared.open(logs)
+        let dir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/mm")
+        var combined = ""
+        for name in ["daily.log", "weekly.log", "menubar.error.log"] {
+            let url = dir.appendingPathComponent(name)
+            if let data = try? String(contentsOf: url, encoding: .utf8), !data.isEmpty {
+                combined += "—— \(name) ——\n"
+                let lines = data.split(separator: "\n", omittingEmptySubsequences: false)
+                combined += lines.suffix(100).joined(separator: "\n") + "\n\n"
+            }
+        }
+        if combined.isEmpty {
+            combined = "No log lines yet.\nFolder: \(dir.path)\n"
+        }
+        let console = ensureConsole()
+        console.showText(title: "mm logs", body: combined)
+        MmWindows.present(console.window)
     }
 
     @objc private func quitExtra() {

@@ -213,7 +213,13 @@ mm menubar status
 mm menubar disable
 ```
 
-Requires **Xcode Command Line Tools** (`swiftc`). Click the extra for disk, battery, Time Machine, Homebrew, then Open Dashboard / Run check now / Upgrade formulae (only when outdated). **Run check now** runs `mm update` (Homebrew metadata only). After `git pull` or `brew upgrade mm`, rebuild the extra so the new binary is what the menu bar loads:
+Requires **Xcode Command Line Tools** (`swiftc`). Click the extra for:
+
+- **Needs attention** — amber lines for each problem (Time Machine, FileVault, outdated formulae/casks, …)
+- **Parameters…** — native window for launchd daily/weekly jobs and upgrade opt-ins (not cron)
+- **How mm works** — in-app guide (no browser); dashboard and upgrades also stay inside mm
+
+**Run check now** runs `mm update` (Homebrew metadata only). After `git pull` or `brew upgrade mm`, rebuild the extra:
 
 ```bash
 mm menubar disable && mm menubar enable

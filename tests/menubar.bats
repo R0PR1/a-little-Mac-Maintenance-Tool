@@ -102,6 +102,48 @@ setup() {
     grep -q 'casksOutdated' "$src"
 }
 
+@test "menu extra has Parameters and How mm works" {
+    src="$BATS_TEST_DIRNAME/../macos/MmExtra.swift"
+    grep -q 'Parameters' "$src"
+    grep -q 'openSettings' "$src"
+    grep -q 'How mm works' "$src"
+    grep -q 'openGuide' "$src"
+    grep -q 'MM_ROOT' "$src"
+    grep -q 'MmWindows' "$src"
+    grep -q 'runJobInConsole' "$src"
+    ! grep -q 'runInTerminal' "$src"
+}
+
+@test "native windows module provides guide dashboard settings console" {
+    src="$BATS_TEST_DIRNAME/../macos/MmWindows.swift"
+    [[ -f "$src" ]]
+    grep -q 'MmGuideController' "$src"
+    grep -q 'MmDashboardController' "$src"
+    grep -q 'MmSettingsController' "$src"
+    grep -q 'MmConsoleController' "$src"
+    grep -q 'WKWebView' "$src"
+    grep -q 'isReleasedWhenClosed = false' "$src"
+    grep -q 'orderFrontRegardless' "$src"
+}
+
+@test "menubar plist sets MM_ROOT for docs" {
+    load_mm_libs
+    # shellcheck source=/dev/null
+    source "$BATS_TEST_DIRNAME/../lib/mm/menubar.sh"
+    extra="$BATS_TEST_TMPDIR/fake-extra"
+    printf '%s\n' '#!/bin/sh' > "$extra"
+    chmod +x "$extra"
+    mm_menubar_write_plist "$extra"
+    plist="$(mm_menubar_plist_path)"
+    grep -A1 '<key>MM_ROOT</key>' "$plist" | grep -q '<string>'
+}
+
+@test "user guide docs ship in the tree" {
+    [[ -f "$BATS_TEST_DIRNAME/../docs/user-guide.md" ]]
+    [[ -f "$BATS_TEST_DIRNAME/../docs/user-guide.html" ]]
+    grep -qi 'launchd' "$BATS_TEST_DIRNAME/../docs/user-guide.md"
+}
+
 @test "status --json writes cache before printing" {
     src="$BATS_TEST_DIRNAME/../lib/mm/json.sh"
     grep -q 'printf .*%s.* > "$MM_STATUS_CACHE"' "$src"

@@ -17,6 +17,9 @@ setup() {
     [[ "$output" == *'"percent":54'* ]]
     [[ "$output" == *'"detail":"54% · 421Gi free"'* ]]
     [[ "$output" == *'"issues":[]'* ]]
+    [[ "$output" == *'"settings"'* ]]
+    [[ "$output" == *'"daily_enabled":true'* ]]
+    [[ "$output" == *'"weekly_upgrade":false'* ]]
 }
 
 @test "mm --json is an alias for status --json" {

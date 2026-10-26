@@ -15,7 +15,7 @@ mm_die() {
 mm_required_files() {
     local root="$1"
     local rel
-    for rel in bin/mm lib/mm/output.sh lib/mm/utils.sh lib/mm/json.sh macos/MmExtra.swift scripts/build-menubar.sh VERSION launchd/mm.daily.plist.template; do
+    for rel in bin/mm lib/mm/output.sh lib/mm/utils.sh lib/mm/json.sh macos/MmExtra.swift macos/MmWindows.swift scripts/build-menubar.sh docs/user-guide.html VERSION launchd/mm.daily.plist.template; do
         [[ -e "$root/$rel" ]] || return 1
     done
 }
@@ -41,14 +41,16 @@ EOF
 
 mm_copy_payload() {
     local dest="$1"
-    mkdir -p "$dest/bin" "$dest/lib/mm" "$dest/launchd" "$dest/completions" "$dest/macos" "$dest/scripts"
+    mkdir -p "$dest/bin" "$dest/lib/mm" "$dest/launchd" "$dest/completions" "$dest/macos" "$dest/scripts" "$dest/docs"
     cp "$ROOT_DIR/bin/mm" "$dest/bin/mm"
     cp "$ROOT_DIR/lib/mm/"*.sh "$dest/lib/mm/"
     cp "$ROOT_DIR/launchd/"*.template "$dest/launchd/"
-    cp "$ROOT_DIR/macos/MmExtra.swift" "$dest/macos/MmExtra.swift"
+    cp "$ROOT_DIR/macos/"*.swift "$dest/macos/"
     cp "$ROOT_DIR/scripts/build-menubar.sh" "$dest/scripts/build-menubar.sh"
     cp "$ROOT_DIR/VERSION" "$dest/VERSION"
     cp "$ROOT_DIR/completions/_mm" "$dest/completions/_mm"
+    cp "$ROOT_DIR/docs/user-guide.md" "$dest/docs/user-guide.md"
+    cp "$ROOT_DIR/docs/user-guide.html" "$dest/docs/user-guide.html"
     chmod 755 "$dest/bin/mm" "$dest/scripts/build-menubar.sh"
 }
 

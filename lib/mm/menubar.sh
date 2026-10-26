@@ -29,8 +29,9 @@ mm_menubar_user_path() {
 
 mm_menubar_write_plist() {
     local extra="$1"
-    local bin_path plist path
+    local bin_path plist path root
     bin_path="$(mm_bin_path)"
+    root="$MM_PROJECT_DIR"
     plist="$(mm_menubar_plist_path)"
     path="$(mm_menubar_user_path)"
     mkdir -p "$MM_LAUNCH_AGENTS_DIR" "$MM_LOG_DIR"
@@ -53,6 +54,8 @@ mm_menubar_write_plist() {
   <dict>
     <key>MM_BIN</key>
     <string>$(mm_xml_escape "$bin_path")</string>
+    <key>MM_ROOT</key>
+    <string>$(mm_xml_escape "$root")</string>
     <key>PATH</key>
     <string>$(mm_xml_escape "$path")</string>
   </dict>

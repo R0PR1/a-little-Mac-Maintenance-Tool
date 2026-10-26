@@ -2,7 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SRC="$ROOT_DIR/macos/MmExtra.swift"
+SRC_DIR="$ROOT_DIR/macos"
+SOURCES=(
+    "$SRC_DIR/MmExtra.swift"
+    "$SRC_DIR/MmWindows.swift"
+)
 APP_DIR="$ROOT_DIR/macos/build/MmExtra.app"
 MACOS_DIR="$APP_DIR/Contents/MacOS"
 BIN="$MACOS_DIR/mm-extra"
@@ -18,10 +22,12 @@ if ! command -v swiftc >/dev/null 2>&1; then
     exit 2
 fi
 
-if [[ ! -f "$SRC" ]]; then
-    printf 'mm menubar: missing %s\n' "$SRC" >&2
-    exit 2
-fi
+for src in "${SOURCES[@]}"; do
+    if [[ ! -f "$src" ]]; then
+        printf 'mm menubar: missing %s\n' "$src" >&2
+        exit 2
+    fi
+done
 
 mkdir -p "$MACOS_DIR" "$APP_DIR/Contents/Resources"
 
@@ -52,6 +58,6 @@ cat > "$PLIST" <<'EOF'
 </plist>
 EOF
 
-swiftc -O -parse-as-library -framework AppKit -o "$BIN" "$SRC"
+swiftc -O -parse-as-library -framework AppKit -framework WebKit -o "$BIN" "${SOURCES[@]}"
 chmod 755 "$BIN"
 printf 'Built %s\n' "$APP_DIR"

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How mm works</title>
+  <style>
+    :root {
+      --bg: #14201c;
+      --panel: #1c2c26;
+      --text: #e8efe9;
+      --muted: #9bb0a4;
+      --sage: #81b29a;
+      --amber: #f2cc8f;
+      --red: #e07a5f;
+      --line: #2f433a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 16px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+      background: linear-gradient(160deg, #101a16, #1a2922 45%, #14201c);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    main {
+      max-width: 42rem;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+    h1 { font-size: 1.85rem; margin: 0 0 0.4rem; letter-spacing: -0.02em; }
+    h2 { font-size: 1.15rem; margin: 2rem 0 0.75rem; color: var(--sage); }
+    p, li { color: var(--text); }
+    .lede { color: var(--muted); margin-top: 0; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      margin: 1rem 0;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    th, td { text-align: left; padding: 0.45rem 0.35rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; }
+    code, pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.86rem;
+    }
+    code { background: #0e1713; padding: 0.1rem 0.35rem; border-radius: 4px; }
+    pre {
+      background: #0e1713;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      overflow-x: auto;
+    }
+    .pip { display: inline-block; width: 0.65rem; height: 0.65rem; border-radius: 50%; margin-right: 0.35rem; }
+    .sage { background: var(--sage); }
+    .amber { background: var(--amber); }
+    .red { background: var(--red); }
+    .foot { margin-top: 2.5rem; color: var(--muted); font-size: 0.9rem; }
+    a { color: var(--amber); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>How mm works</h1>
+    <p class="lede">A tiny macOS health dashboard. Homebrew drift, disk, battery, Time Machine, security — without surprise upgrades, sudo, or deleting your files.</p>
+
+    <h2>Menu bar colors</h2>
+    <div class="card">
+      <table>
+        <tr><td><span class="pip sage"></span>Sage</td><td>Healthy</td></tr>
+        <tr><td><span class="pip amber"></span>Amber</td><td>Attention — listed under <strong>Needs attention</strong></td></tr>
+        <tr><td><span class="pip red"></span>Red</td><td>Action required (e.g. critical disk)</td></tr>
+        <tr><td>Pulsing</td><td>A job is running</td></tr>
+      </table>
+    </div>
+
+    <h2>Menu actions</h2>
+    <div class="card">
+      <table>
+        <tr><th>Item</th><th>Effect</th></tr>
+        <tr><td>Open Dashboard</td><td>Native health window</td></tr>
+        <tr><td>Run check now</td><td><code>mm update</code> in a native console — never upgrades</td></tr>
+        <tr><td>Upgrade formulae…</td><td><code>mm upgrade</code> in a native console</td></tr>
+        <tr><td>Parameters…</td><td>Native toggles for launchd automation (not cron)</td></tr>
+        <tr><td>How mm works</td><td>This page, inside mm</td></tr>
+      </table>
+    </div>
+
+    <h2>Automation (launchd)</h2>
+    <p>Scheduled jobs are LaunchAgents in <code>~/Library/LaunchAgents/</code>, not cron.</p>
+    <div class="card">
+      <table>
+        <tr><th>Job</th><th>Default</th><th>Behavior</th></tr>
+        <tr><td>Daily check</td><td>On · 09:15</td><td>Read-only Homebrew refresh + log</td></tr>
+        <tr><td>Weekly job</td><td>Off</td><td>Runs only if you enable it</td></tr>
+        <tr><td>Allow weekly upgrades</td><td><strong>Off</strong></td><td>Opt-in: weekly job may run <code>mm upgrade</code></td></tr>
+      </table>
+    </div>
+    <pre>mm schedule enable daily
+mm schedule enable weekly
+mm config set weekly_upgrade true
+mm schedule status</pre>
+
+    <h2>Safety</h2>
+    <ul>
+      <li>No implicit <code>sudo</code></li>
+      <li>No deleting user files</li>
+      <li><code>status</code>, <code>doctor</code>, <code>security</code>, <code>logs</code>, <code>version</code> stay read-only</li>
+      <li>Upgrades only via <code>mm upgrade</code> or the weekly opt-in</li>
+    </ul>
+
+    <h2>Files</h2>
+    <div class="card">
+      <table>
+        <tr><td><code>~/.config/mm/config</code></td><td>Settings</td></tr>
+        <tr><td><code>~/Library/Logs/mm/</code></td><td>Logs</td></tr>
+        <tr><td><code>~/Library/Caches/mm/last-status.json</code></td><td>Menu snapshot</td></tr>
+      </table>
+    </div>
+
+    <p class="foot">After upgrading mm, rebuild the extra: <code>mm menubar disable &amp;&amp; mm menubar enable</code></p>
+  </main>
+</body>
+</html>

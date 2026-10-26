@@ -156,6 +156,38 @@ mm_json_overall() {
     esac
 }
 
+mm_json_bool() {
+    if [[ "$1" == 'true' ]]; then
+        printf 'true'
+    else
+        printf 'false'
+    fi
+}
+
+mm_json_settings() {
+    local daily_enabled weekly_enabled weekly_upgrade upgrade_casks
+    local daily_hour daily_minute weekly_day weekly_hour weekly_minute
+    daily_enabled="$(mm_config_get daily_enabled)"
+    weekly_enabled="$(mm_config_get weekly_enabled)"
+    weekly_upgrade="$(mm_config_get weekly_upgrade)"
+    upgrade_casks="$(mm_config_get upgrade_casks)"
+    daily_hour="$(mm_config_get daily_hour)"
+    daily_minute="$(mm_config_get daily_minute)"
+    weekly_day="$(mm_config_get weekly_day)"
+    weekly_hour="$(mm_config_get weekly_hour)"
+    weekly_minute="$(mm_config_get weekly_minute)"
+    printf '{"daily_enabled":%s,"weekly_enabled":%s,"weekly_upgrade":%s,"upgrade_casks":%s,"daily_hour":%s,"daily_minute":%s,"weekly_day":%s,"weekly_hour":%s,"weekly_minute":%s}' \
+        "$(mm_json_bool "$daily_enabled")" \
+        "$(mm_json_bool "$weekly_enabled")" \
+        "$(mm_json_bool "$weekly_upgrade")" \
+        "$(mm_json_bool "$upgrade_casks")" \
+        "$((10#$daily_hour))" \
+        "$((10#$daily_minute))" \
+        "$((10#$weekly_day))" \
+        "$((10#$weekly_hour))" \
+        "$((10#$weekly_minute))"
+}
+
 mm_status_json() {
     local overall payload
     # shellcheck disable=SC2034
@@ -172,7 +204,7 @@ mm_status_json() {
 
     overall="$(mm_json_overall)"
     payload="$(cat <<EOF
-{"version":$(mm_json_str "${MM_SNAP_VERSION:-$(mm_version_value)}"),"overall":$(mm_json_str "$overall"),"exit":${MM_EXIT_STATE:-0},"checked_at":$(mm_now),"running":$(mm_json_running),"host":{"model":$(mm_json_str "${MM_SNAP_MODEL:-Mac}"),"macos":$(mm_json_str "${MM_SNAP_MACOS:-unknown}"),"arch":$(mm_json_str "${MM_SNAP_ARCH:-$(uname -m)}")},"disk":$(mm_json_disk),"battery":$(mm_json_battery),"time_machine":$(mm_json_item 'Time Machine'),"homebrew":$(mm_json_homebrew),"automation":{"daily":$(mm_json_item 'Daily check'),"weekly":$(mm_json_item 'Weekly upgrade')},"filevault":$(mm_json_item 'FileVault'),"issues":$(mm_json_issues),"hints":$(mm_json_hints)}
+{"version":$(mm_json_str "${MM_SNAP_VERSION:-$(mm_version_value)}"),"overall":$(mm_json_str "$overall"),"exit":${MM_EXIT_STATE:-0},"checked_at":$(mm_now),"running":$(mm_json_running),"host":{"model":$(mm_json_str "${MM_SNAP_MODEL:-Mac}"),"macos":$(mm_json_str "${MM_SNAP_MACOS:-unknown}"),"arch":$(mm_json_str "${MM_SNAP_ARCH:-$(uname -m)}")},"disk":$(mm_json_disk),"battery":$(mm_json_battery),"time_machine":$(mm_json_item 'Time Machine'),"homebrew":$(mm_json_homebrew),"automation":{"daily":$(mm_json_item 'Daily check'),"weekly":$(mm_json_item 'Weekly upgrade')},"filevault":$(mm_json_item 'FileVault'),"issues":$(mm_json_issues),"settings":$(mm_json_settings),"hints":$(mm_json_hints)}
 EOF
 )"
     mkdir -p "$MM_CACHE_DIR"
