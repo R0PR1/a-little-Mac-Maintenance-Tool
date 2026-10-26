@@ -2,7 +2,7 @@
 
 **A tiny, reliable health and maintenance CLI for macOS.**
 
-`mm` is the command you run when you want a honest snapshot of a Mac — Homebrew drift, disk pressure, FileVault, Time Machine — without surprise upgrades, `sudo`, or a cleaner that deletes your files.
+`mm` is the command you run when you want an honest snapshot of a Mac — Homebrew drift, disk pressure, FileVault, Time Machine — without surprise upgrades, `sudo`, or a cleaner that deletes your files.
 
 <p align="center">
   <img src="docs/assets/dashboard.png" alt="mm status dashboard" width="880" />
@@ -13,12 +13,14 @@
   <img alt="license" src="https://img.shields.io/badge/license-MIT-f2cc8f?style=flat-square" />
   <img alt="shell" src="https://img.shields.io/badge/shell-Bash-14201c?style=flat-square" />
   <img alt="tests" src="https://img.shields.io/badge/tests-Bats%20%2B%20ShellCheck-81b29a?style=flat-square" />
+  <img alt="menubar" src="https://img.shields.io/badge/menu%20extra-AppKit-81b29a?style=flat-square" />
 </p>
 
 ```bash
 mm              # same as mm status — read-only dashboard
 mm update       # refresh Homebrew metadata, never upgrade
 mm upgrade      # explicit formula upgrades (casks opt-in)
+mm menubar enable
 ```
 
 ---
@@ -33,7 +35,7 @@ Most “Mac maintenance” tools either do too much, or they hide mutations behi
 | --- | --- |
 | **Safe by default** | `mm` never upgrades packages, never calls `sudo`, never deletes user files. |
 | **Explicit upgrades** | `mm update` reports. `mm upgrade` mutates. Weekly upgrades are **off** until you opt in. |
-| **macOS-native** | `launchd`, `pmset`, `tmutil`, `fdesetup`, `csrutil`, `spctl` — not cron, not a daemon you cannot inspect. |
+| **macOS-native** | `launchd`, menu extra AppKit, `pmset`, `tmutil`, `fdesetup` — not cron, not a black-box cleaner. |
 | **Predictable exits** | `0` healthy · `1` attention · `2` action required · `64` usage error |
 
 ---
@@ -80,7 +82,7 @@ fpath+=("$(pwd)/completions")
 autoload -U compinit && compinit
 ```
 
-Uninstall a source install with `make uninstall`. Configuration (`~/.config/mm/`) and logs (`~/Library/Logs/mm/`) are preserved. A local formula file is at [`Formula/mm.rb`](Formula/mm.rb) (`brew install --HEAD --build-from-source Formula/mm.rb`).
+Uninstall a source install with `make uninstall`. Configuration (`~/.config/mm/`) and logs (`~/Library/Logs/mm/`) are preserved. A local formula file is at [`Formula/mm.rb`](Formula/mm.rb).
 
 ---
 
@@ -117,6 +119,45 @@ SECURITY
 
 Colors appear only when stdout is a TTY. Missing tools degrade to `unavailable` instead of crashing.
 
+Machine-readable twin: `mm status --json` (also `mm --json`) writes `~/Library/Caches/mm/last-status.json` for the menu extra.
+
+---
+
+## Menu extra (macOS)
+
+A tiny `mm ●` next to the clock. Everything stays **inside mm** — no Terminal hand-off, no browser for the guide.
+
+| Pip | Meaning |
+| --- | --- |
+| Sage ● | Healthy |
+| Amber ● | Attention — listed under **Needs attention** |
+| Red ● | Action required |
+| Pulsing | A job is running |
+
+```bash
+mm menubar enable
+mm menubar status
+mm menubar disable
+```
+
+Requires **Xcode Command Line Tools** (`swiftc`). From the menu:
+
+| Item | What you get |
+| --- | --- |
+| **Needs attention** | Amber lines (`Time Machine — no backup`, `FileVault — disabled`, outdated formulae/casks, …) |
+| **Open Dashboard** | Native health window (reopens after close) |
+| **Run check now** | `mm update` in a native console — metadata only |
+| **Upgrade formulae…** | `mm upgrade` in a native console (explicit) |
+| **Parameters…** | Toggle launchd **daily** / **weekly** jobs, plus `weekly_upgrade` and `upgrade_casks` opt-ins (**not cron**) |
+| **How mm works** | In-app WebKit guide ([docs/user-guide.md](docs/user-guide.md)) |
+| **Open logs** | Recent lines from `~/Library/Logs/mm/` in-app |
+
+After `git pull`, `make reinstall`, or `brew upgrade mm`, rebuild the extra:
+
+```bash
+mm menubar disable && mm menubar enable
+```
+
 ---
 
 ## Commands
@@ -124,6 +165,7 @@ Colors appear only when stdout is a TTY. Missing tools degrade to `unavailable` 
 | Command | Mutates? | Purpose |
 | --- | :---: | --- |
 | `mm` / `mm status` | no | Concise health dashboard |
+| `mm status --json` | no | Snapshot for the menu extra (+ cache file) |
 | `mm update` | metadata only | `brew update` + list outdated formulae and casks |
 | `mm upgrade` | yes | Upgrade formulae. Casks only with `--casks` or `upgrade_casks=true` |
 | `mm doctor` | no* | Verbose diagnostics (`brew doctor` is the only Homebrew diagnostic) |
@@ -131,7 +173,7 @@ Colors appear only when stdout is a TTY. Missing tools degrade to `unavailable` 
 | `mm logs` `[daily\|weekly\|--follow]` | no | Read `~/Library/Logs/mm/` |
 | `mm config` | config file | Show / get / set / reset keys |
 | `mm schedule` | launchd | Enable, disable, reload LaunchAgents |
-| `mm menubar` | launchd | macOS menu extra next to the clock |
+| `mm menubar` | launchd | Build & load the macOS menu extra |
 | `mm self-update` | install tree | Homebrew **or** git fast-forward, never both |
 | `mm version` | no | Local version, plus a cached remote hint if one exists |
 
@@ -144,13 +186,13 @@ mm internal daily     # brew update + outdated report
 mm internal weekly    # same, or mm upgrade if weekly_upgrade=true
 ```
 
-Full reference: [docs/commands.md](docs/commands.md).
+Full reference: [docs/commands.md](docs/commands.md) · User guide: [docs/user-guide.md](docs/user-guide.md).
 
 ---
 
 ## Configuration
 
-File: `~/.config/mm/config` (mode `600`). **Never sourced.** Only allow-listed keys are parsed.
+File: `~/.config/mm/config` (mode `600`). **Never sourced.** Only allow-listed keys are parsed. See [docs/configuration.md](docs/configuration.md).
 
 ```ini
 daily_enabled=true
@@ -201,29 +243,7 @@ mm config set weekly_upgrade true
 mm schedule enable weekly
 ```
 
----
-
-## Menu extra (macOS)
-
-A tiny `mm ●` item in the menu bar (next to the clock). Sage = healthy, amber = attention, pulsing sage = a job is running.
-
-```bash
-mm menubar enable
-mm menubar status
-mm menubar disable
-```
-
-Requires **Xcode Command Line Tools** (`swiftc`). Click the extra for:
-
-- **Needs attention** — amber lines for each problem (Time Machine, FileVault, outdated formulae/casks, …)
-- **Parameters…** — native window for launchd daily/weekly jobs and upgrade opt-ins (not cron)
-- **How mm works** — in-app guide (no browser); dashboard and upgrades also stay inside mm
-
-**Run check now** runs `mm update` (Homebrew metadata only). After `git pull` or `brew upgrade mm`, rebuild the extra:
-
-```bash
-mm menubar disable && mm menubar enable
-```
+The same toggles are available from the menu extra under **Parameters…**.
 
 ---
 
@@ -243,8 +263,9 @@ mm menubar disable && mm menubar enable
 
 ```bash
 make syntax
-make lint    # ShellCheck
-make test    # Bats, fully mocked — does not touch real Homebrew or LaunchAgents
+make lint     # ShellCheck
+make test     # Bats, fully mocked — does not touch real Homebrew or LaunchAgents
+make menubar  # Build the AppKit extra (macOS + swiftc + WebKit)
 ```
 
 Read [CURSOR.md](CURSOR.md) before changing behavior. Architecture notes live in [docs/architecture.md](docs/architecture.md).
